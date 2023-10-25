@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "rt1"
+version = "3.0"
+description = "Implementation of the RT1 first order radiative transfer model."
+requires-python = ">=3.6"
+
+authors = [
+  { name="Raphael Quast", email="raphael.quast@geo.tuwien.ac.at" },
+]
+
+keywords = ["Radiative Transfer", "Soil Moisture", "Vegetation", "Radar"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = ["numpy", "scipy", "sympy"]
+
+[project.optional-dependencies]
+full = ["symengine", "matplotlib"]
+symengine = ["symengine", "matplotlib"]
+
+
+[project.urls]
+Documentation = "https://github.com/TUW-GEO/rt1"
+Repository = "https://github.com/TUW-GEO/rt1"
