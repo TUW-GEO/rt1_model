@@ -3,10 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["src/rt1"]
+where = ["src"]
+include = ["rt1_model"]
+exclude = ["tests"]
 
 [project]
-name = "rt1"
+name = "rt1_model"
 version = "3.0"
 description = "Implementation of the RT1 first order radiative transfer model."
 requires-python = ">=3.6"
