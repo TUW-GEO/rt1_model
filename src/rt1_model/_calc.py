@@ -443,7 +443,7 @@ class RT1(object):
         # if bsf is not None:
         #     self._bsf = _parse_sympy_param(bsf)
 
-        self.param_dict.update({key: np.atleast_1d(val) for key, val in kwargs.items()})
+        self.param_dict = {key: np.atleast_1d(val) for key, val in kwargs.items()}
 
     def calc(self, sig0=False, dB=False):
         """
