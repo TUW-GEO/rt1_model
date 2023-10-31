@@ -153,7 +153,7 @@ class RT1(object):
         self.I0 = I0
 
         if param_dict is None:
-            param_dict = dict()
+            param_dict = dict(bsf=0)
         self.param_dict = param_dict
 
         self.lambda_backend = lambda_backend
@@ -413,13 +413,13 @@ class RT1(object):
         if p_ex is not None:
             self.p_ex = p_ex
 
-    def set_params(
+    def update_params(
         self,
         # omega=None, tau=None, NormBRDF=None, bsf=None,
         **kwargs,
     ):
         """
-        Set the model parameters.
+        Update the model parameters.
 
         Parameters
         ----------
@@ -443,9 +443,12 @@ class RT1(object):
         # if bsf is not None:
         #     self._bsf = _parse_sympy_param(bsf)
 
-        self.param_dict = {key: np.atleast_1d(val) for key, val in kwargs.items()}
+        if "bsf" not in self.param_dict:
+            kwargs.setdefault("bsf", 0)
 
-    def calc(self, sig0=False, dB=False):
+        self.param_dict.update({key: np.atleast_1d(val) for key, val in kwargs.items()})
+
+    def calc(self, sig0=True, dB=True):
         """
         Calculate model and return result.
 
@@ -640,7 +643,7 @@ class RT1(object):
             tic = timeit.default_timer()
             self._fn_ = self._extract_coefficients(expr_int)
             toc = timeit.default_timer()
-            _log.debug("Coefficients extracted, it took " + str(toc - tic) + " sec.")
+            _log.info(f"Coefficients extracted, it took {toc - tic:.5f} sec.")
             return self._fn_
         else:
             return None
@@ -909,6 +912,97 @@ class RT1(object):
         res = expand(res.xreplace(dict(replacements3)))
         return res
 
+    @property
+    @lru_cache()
+    def _mu_0(self):
+        return np.cos(self.t_0)
+
+    @property
+    @lru_cache()
+    def _mu_ex(self):
+        return np.cos(self.t_ex)
+
+    @property
+    def _all_param_symbs(self):
+        return list(
+            chain(
+                *(
+                    self._get_param_symbs(key)
+                    for key in ("tau", "omega", "NormBRDF", "bsf")
+                )
+            )
+        )
+
+    @lru_cache()
+    def _get_param_symbs(self, param):
+        """Symbols used to define tau, omega, NormBRDF and bsf."""
+        try:
+            expr = sp.parse_expr(
+                getattr(self, f"_{param}"), local_dict=dict(N=sp.Symbol("N"))
+            )
+
+            symbs = list(map(str, expr.free_symbols))
+        except Exception:
+            symbs = [param]
+        return symbs
+
+    @lru_cache()
+    def _get_param_funcs(self, param):
+        """Lambdified functions used to define tau, omega, NormBRDF and bsf."""
+        if not isinstance(getattr(self, f"_{param}"), (str, sp.Basic)):
+            return None
+
+        try:
+            func = sp.lambdify(
+                self._get_param_symbs(param),
+                getattr(self, f"_{param}"),
+                modules=["numpy"],
+            )
+        except Exception:
+            func = None
+        return func
+
+    def _eval_param(self, param):
+        """
+        Numerical evaluation of tau, omega, NormBRDF and bsf.
+
+        All required parameters must be provided in `param_dict`!
+        """
+        func = self._get_param_funcs(param)
+
+        if func is not None:
+            return self._get_param_funcs(param)(
+                **{
+                    key: val
+                    for key, val in self.param_dict.items()
+                    if key in self._get_param_symbs(param)
+                }
+            )
+        else:
+            return getattr(self, f"_{param}")
+
+    def _S2_mu(self, mu, tau):
+        nmax = self.V.ncoefs + self.SRF.ncoefs - 1
+        hlp1 = (
+            np.exp(-tau / mu) * np.log(mu / (1.0 - mu))
+            - expi(-tau)
+            + np.exp(-tau / mu) * expi(tau / mu - tau)
+        )
+
+        # cache the results of the expn-evaluations to speed up the S2 loop
+        @lru_cache()
+        def innerfunc(k):
+            return mu ** (-k) * (expn(k + 1.0, tau) - np.exp(-tau / mu) / k)
+
+        S2 = np.array(
+            [sum(innerfunc(k) for k in range(1, (n + 1) + 1)) for n in range(nmax)]
+        )
+
+        # clear the cache since tau might have changed!
+        innerfunc.cache_clear()
+
+        return S2 + hlp1
+
     def _calc_Fint_1(self):
         """
         Numerical evaluation of the F_int() function.
@@ -999,16 +1093,6 @@ class RT1(object):
 
     @property
     @lru_cache()
-    def _mu_0(self):
-        return np.cos(self.t_0)
-
-    @property
-    @lru_cache()
-    def _mu_ex(self):
-        return np.cos(self.t_ex)
-
-    @property
-    @lru_cache()
     def _mu_0_x(self):
         # pre-evaluate and cache required cosine powers
         nmax = self.V.ncoefs + self.SRF.ncoefs - 1
@@ -1023,84 +1107,372 @@ class RT1(object):
         mux = np.array([self._mu_ex ** (n + 1) for n in range(nmax)])
         return mux
 
-    def _S2_mu(self, mu, tau):
-        nmax = self.V.ncoefs + self.SRF.ncoefs - 1
+    # %% derivatives
 
-        hlp1 = (
-            np.exp(-tau / mu) * np.log(mu / (1.0 - mu))
-            - expi(-tau)
-            + np.exp(-tau / mu) * expi(tau / mu - tau)
-        )
-
-        # cache the results of the expn-evaluations to speed up the S2 loop
-        @lru_cache()
-        def innerfunc(k):
-            return mu ** (-k) * (expn(k + 1.0, tau) - np.exp(-tau / mu) / k)
-
-        S2 = np.array(
-            [sum(innerfunc(k) for k in range(1, (n + 1) + 1)) for n in range(nmax)]
-        )
-
-        # clear the cache since tau might have changed!
-        innerfunc.cache_clear()
-
-        return S2 + hlp1
-
-    @property
-    def _all_param_symbs(self):
-        return list(
-            chain(
-                *(
-                    self._get_param_symbs(key)
-                    for key in ("tau", "omega", "NormBRDF", "bsf")
-                )
-            )
-        )
-
-    @lru_cache()
-    def _get_param_symbs(self, param):
-        """Symbols used to define tau, omega, NormBRDF and bsf."""
-        try:
-            expr = sp.parse_expr(
-                getattr(self, f"_{param}"), local_dict=dict(N=sp.Symbol("N"))
-            )
-
-            symbs = list(map(str, expr.free_symbols))
-        except Exception:
-            symbs = [param]
-        return symbs
-
-    @lru_cache()
-    def _get_param_funcs(self, param):
-        """Lambdified functions used to define tau, omega, NormBRDF and bsf."""
-        if not isinstance(getattr(self, f"_{param}"), (str, sp.Basic)):
-            return None
-
-        try:
-            func = sp.lambdify(
-                self._get_param_symbs(param),
-                getattr(self, f"_{param}"),
-                modules=["numpy"],
-            )
-        except Exception:
-            func = None
-        return func
-
-    def _eval_param(self, param):
+    def _dvolume_dtau(self):
         """
-        Numerical evaluation of tau, omega, NormBRDF and bsf.
+        Get the derivative of the volume-contribution with respect to tau.
 
-        All required parameters must be provided in `param_dict`!
+        Returns
+        -------
+        dvdt : array_like(float)
+               Numerical value of dIvol/dtau for the given set of parameters
+
         """
-        func = self._get_param_funcs(param)
-
-        if func is not None:
-            return self._get_param_funcs(param)(
-                **{
-                    key: val
-                    for key, val in self.param_dict.items()
-                    if key in self._get_param_symbs(param)
-                }
+        dvdt = (
+            self.I0
+            * self.omega
+            * (self._mu_0 / (self._mu_0 + self._mu_ex))
+            * (
+                (1.0 / self._mu_0 + 1.0 / self._mu_ex ** (-1))
+                * np.exp(-self.tau / self._mu_0 - self.tau / self._mu_ex)
             )
+            * self.V.p(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+        )
+
+        return (1.0 - self.bsf) * dvdt
+
+    def _dvolume_domega(self):
+        """
+        Get the derivative of the volume-contribution with respect to omega.
+
+        Returns
+        -------
+        dvdo : array_like(float)
+               Numerical value of dIvol/domega for the given set of parameters
+
+        """
+        dvdo = (
+            (self.I0 * self._mu_0 / (self._mu_0 + self._mu_ex))
+            * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
+            * self.V.p(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+        )
+
+        return (1.0 - self.bsf) * dvdo
+
+    def _dvolume_dbsf(self):
+        """
+        Get the derivative of the volume-contribution with respect to bsf.
+
+        Returns
+        -------
+        dvdo : array_like(float)
+               Numerical value of dIvol/dbsf for the given set of parameters
+
+        """
+        vol = (
+            (self.I0 * self.omega * self._mu_0 / (self._mu_0 + self._mu_ex))
+            * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
+            * self.V.p(
+                self.t_0,
+                self.t_ex,
+                self.p_0,
+                self.p_ex,
+                param_dict=self.param_dict,
+            )
+        )
+
+        return -vol
+
+    def _dvolume_dR(self):
+        """
+        Get the derivative of the volume-contribution with respect to NormBRDF.
+
+        Returns
+        -------
+        dvdr : array_like(float)
+               Numerical value of dIvol/dNormBRDF for the given set of parameters
+
+        """
+        dvdr = 0.0
+
+        return dvdr
+
+    def _dsurface_dtau(self):
+        """
+        Get the derivative of the surface-contribution with respect to tau.
+
+        Returns
+        -------
+        dsdt : array_like(float)
+               Numerical value of dIsurf/dtau for the given set of parameters
+
+        """
+        dsdt = (
+            self.I0
+            * (-1.0 / self._mu_0 - 1.0 / self._mu_ex)
+            * np.exp(-self.tau / self._mu_0 - self.tau / self._mu_ex)
+            * self._mu_0
+            * self.SRF.brdf(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+        )
+
+        # Incorporate BRDF-normalization factor
+        dsdt = self.NormBRDF * (1.0 - self.bsf) * dsdt
+
+        return dsdt
+
+    def _dsurface_domega(self):
+        """
+        Get the derivative of the surface-contribution with respect to omega.
+
+        Returns
+        -------
+        dsdo : array_like(float)
+               Numerical value of dIsurf/domega for the given set of parameters
+
+        """
+        dsdo = 0.0
+
+        return dsdo
+
+    def _dsurface_dR(self):
+        """
+        Get the derivative of the surface-contribution with respect to NormBRDF.
+
+        Returns
+        -------
+        dsdr : array_like(float)
+               Numerical value of dIsurf/dNormBRDF for the given set of parameters
+
+        """
+        I_bs = (
+            self.I0
+            * self._mu_0
+            * self.SRF.brdf(
+                self.t_0,
+                self.t_ex,
+                self.p_0,
+                self.p_ex,
+                param_dict=self.param_dict,
+            )
+        )
+
+        Isurf = (np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex))) * I_bs
+
+        return (1.0 - self.bsf) * Isurf + self.bsf * I_bs
+
+    def _dsurface_dbsf(self):
+        """
+        Numerical evaluation of the surface-contribution.
+
+        (http://rt1.readthedocs.io/en/latest/theory.html#surface_contribution)
+
+        Returns
+        -------
+        array_like(float)
+            Numerical value of the surface-contribution for the
+            given set of parameters
+
+        """
+        # bare soil contribution
+        I_bs = (
+            self.I0
+            * self._mu_0
+            * self.SRF.brdf(
+                self.t_0,
+                self.t_ex,
+                self.p_0,
+                self.p_ex,
+                param_dict=self.param_dict,
+            )
+        )
+
+        Isurf = (
+            (np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
+            * I_bs
+            * np.ones_like(self.t_0)
+        )
+
+        return self.NormBRDF * (I_bs - Isurf)
+
+    @lru_cache(20)
+    def _d_surface_dummy_lambda(self, key):
+        """
+        Get a function to compute direct surface-contribution parameter derivatives.
+
+        A cached lambda-function for computing the derivative of the surface-function
+        with respect to a given parameter.
+
+        Parameters
+        ----------
+        key : str
+            the parameter to use.
+
+        Returns
+        -------
+        callable
+            A function that calculates the derivative with respect to key.
+
+        """
+        theta_0 = sp.Symbol("theta_0")
+        theta_ex = sp.Symbol("theta_ex")
+        phi_0 = sp.Symbol("phi_0")
+        phi_ex = sp.Symbol("phi_ex")
+
+        args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
+
+        return sp.lambdify(
+            args,
+            sp.diff(self.SRF._func, sp.Symbol(key)),
+            modules=["numpy", "sympy"],
+        )
+
+    @lru_cache(20)
+    def _d_volume_dummy_lambda(self, key):
+        """
+        Get a function to compute direct volume-contribution parameter derivatives.
+
+        A cached lambda-function for computing the derivative of the volume-function
+        with respect to a given parameter.
+
+        Parameters
+        ----------
+        key : str
+            the parameter to use.
+
+        Returns
+        -------
+        callable
+            A function that calculates the derivative with respect to key.
+
+        """
+        theta_0 = sp.Symbol("theta_0")
+        theta_ex = sp.Symbol("theta_ex")
+        phi_0 = sp.Symbol("phi_0")
+        phi_ex = sp.Symbol("phi_ex")
+
+        args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
+
+        return sp.lambdify(
+            args,
+            sp.diff(self.V._func, sp.Symbol(key)),
+            modules=["numpy", "sympy"],
+        )
+
+    def _d_surface_ddummy(self, key):
+        """
+        Surface contribution derivative with respect to a given parameter (incl. bsf).
+
+        Parameters
+        ----------
+        key : The parameter to use
+
+        Returns
+        -------
+        array_like(float)
+            Numerical value of dIsurf/dkey for the given set of parameters
+
+        """
+        dI_bs = (
+            self.I0
+            * self._mu_0
+            * self._d_surface_dummy_lambda(key)(
+                self.t_0, self.t_ex, self.p_0, self.p_ex, **self.param_dict
+            )
+        )
+
+        dI_s = (np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex))) * dI_bs
+
+        return self.NormBRDF * ((1.0 - self.bsf) * dI_s + self.bsf * dI_bs)
+
+    def _d_volume_ddummy(self, key):
+        """
+        Volume contribution derivative with respect to a given parameter (incl. bsf).
+
+        Parameters
+        ----------
+        key : The parameter to use
+
+        Returns
+        -------
+        array_like(float)
+            Numerical value of dIvol/dkey for the given set of parameters
+
+        """
+        dIvol = (
+            self.I0
+            * self.omega
+            * self._mu_0
+            / (self._mu_0 + self._mu_ex)
+            * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
+            * self._d_volume_dummy_lambda(key)(
+                self.t_0, self.t_ex, self.p_0, self.p_ex, **self.param_dict
+            )
+        )
+        return (1.0 - self.bsf) * dIvol
+
+    def jacobian(self, dB=True, sig0=True, param_list=["omega", "tau", "NormBRDF"]):
+        """
+        Return the jacobian of the total backscatter (without interaction contribution).
+
+        (With respect to the parameters provided in param_list.)
+        (default: param_list = ['omega', 'tau', 'NormBRDF'])
+
+        The jacobian can be evaluated for measurements in linear or dB
+        units, and for either intensity- or sigma_0 values.
+
+        Note:
+            The contribution of the interaction-term is currently
+            NOT considered in the calculation of the jacobian!
+
+        Parameters
+        ----------
+        dB : boolean (default = False)
+             Indicator whether linear or dB units are used.
+             The applied relation is given by:
+
+             dI_dB(x)/dx =
+             10 / [log(10) * I_linear(x)] * dI_linear(x)/dx
+
+        sig0 : boolean (default = False)
+               Indicator wheather intensity- or sigma_0-values are used
+               The applied relation is given by:
+
+               sig_0 = 4 * pi * cos(inc) * I
+
+               where inc denotes the incident zenith-angle and I is the
+               corresponding intensity
+        param_list : list
+                     a list of strings that correspond to the parameters
+                     for which the jacobian should be evaluated.
+
+                     possible values are: 'omega', 'tau' 'NormBRDF' and
+                     any string corresponding to a sympy.Symbol used in the
+                     definition of V or SRF
+
+        Returns
+        -------
+        jac : array-like(float)
+              The jacobian of the total backscatter with respect to
+              omega, tau and NormBRDF
+
+        """
+        if sig0 is True and dB is False:
+            norm = 4.0 * np.pi * np.cos(self.t_0)
+        elif dB is True:
+            norm = 10.0 / (np.log(10.0) * (self.surface() + self.volume()))
         else:
-            return getattr(self, f"_{param}")
+            norm = 1.0
+
+        jac = []
+        for key in param_list:
+            if key == "omega":
+                jac += [(self._dsurface_domega() + self._dvolume_domega()) * norm]
+            elif key == "tau":
+                jac += [(self._dsurface_dtau() + self._dvolume_dtau()) * norm]
+            elif key == "NormBRDF":
+                jac += [(self._dsurface_dR() + self._dvolume_dR()) * norm]
+            elif key == "bsf":
+                jac += [(self._dsurface_dbsf() + self._dvolume_dbsf()) * norm]
+            elif key in self.param_dict:
+                jac += [
+                    (self._d_surface_ddummy(key) + self._d_volume_ddummy(key)) * norm
+                ]
+            else:
+                assert False, (
+                    "error in jacobian calculation... "
+                    + str(key)
+                    + " is not in param_dict"
+                )
+
+        return jac
