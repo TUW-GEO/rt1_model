@@ -1,3 +1,5 @@
 __pycache__
 .spyproject
 *.egg-info
+docs/build/*
+docs/generated/*
