@@ -420,7 +420,7 @@ def _check_params(R, param_dict, additional_params=[]):
     ignored_params = symbs - set(param_dict)
     if len(ignored_params) > 0:
         if all((i in R.param_dict for i in ignored_params)):
-            _log.warning(
+            _log.debug(
                 f"The parameters {ignored_params} are missing in `param_dict` "
                 f"(static values found in `R.param_dict` are used)!"
             )
@@ -512,7 +512,7 @@ class Analyze:
         gs = GridSpec(2, 3, width_ratios=(100, 100, 25), height_ratios=(10, 2))
         gs.update(hspace=0.35, wspace=0.05)
 
-        rows = int(np.ceil(len(self.param_dict) / slider_cols))
+        rows = max(1, int(np.ceil(len(self.param_dict) / slider_cols)))
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-1, :-1])
 
         self.f = plt.figure(figsize=(10, 6))
@@ -576,7 +576,7 @@ class Analyze:
 
     def _update(self, val):
         startvals = {key: s.val for key, s in self.sliders.items()}
-        self.R.set_params(**startvals)
+        self.R.update_params(**startvals)
         contribs = self.R.calc(sig0=self._sig0, dB=self._dB).squeeze()
         labels = ["Total", "Surface", "Volume", "Interaction"]
 
@@ -648,7 +648,7 @@ class Analyze:
             self._n_mima_samples,
         )[:, np.newaxis]
 
-        self.R.set_params(**startvals)
+        self.R.update_params(**startvals)
         res = self.R.calc(sig0=self._sig0, dB=self._dB)
         return res
 
@@ -703,6 +703,12 @@ class Analyze3D:
         self.R._clear_cache()
 
         self._samples = samples
+
+
+        if R.int_Q is False and "i" in contributions:
+            contributions = contributions.replace("i", "")
+            _log.warning("Interaction term requires int_Q=True!")
+
         self._use_contribs = ["tsvi".index(i) for i in contributions]
 
         self._labels = ["Total", "Surface", "Volume", "Interaction"]
