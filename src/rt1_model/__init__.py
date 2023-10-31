@@ -3,7 +3,7 @@
 # (see https://github.com/matplotlib/matplotlib/blob/main/lib/matplotlib/__init__.py)
 
 import logging as _logging
-from functools import lru_cache as _lru_cache
+from functools import lru_cache
 
 _log = _logging.getLogger(__name__)
 _log.setLevel(_logging.WARNING)
@@ -16,11 +16,11 @@ from . import surface
 __all__ = ["RT1", "volume", "surface", "plot"]
 
 
-@_lru_cache()
+@lru_cache()
 def _ensure_handler():
     """
     The first time this function is called, attach a `StreamHandler` using the
-    same format as `logging.basicConfig` to the EOmaps root logger.
+    same format as `logging.basicConfig` to the root logger.
 
     Return this handler every time this function is called.
 
@@ -71,12 +71,12 @@ _log_format_presets = {
 
 def set_loglevel(level, fmt="timed"):
     """
-    Configure EOmaps's logging levels (and formatting).
+    Configure logging levels (and formatting).
 
-    EOmaps uses the standard library `logging` framework under the root
-    logger 'eomaps'.  This is a helper function to:
+    rt1_model uses the standard library `logging` framework under the root
+    logger 'rt1_model'.  This is a helper function to:
 
-    - set EOmaps's root logger level
+    - set rt1_model's root logger level
     - set the root logger handler's level, creating the handler
       if it does not exist yet
     - set the root logger handler's formatter
@@ -85,7 +85,7 @@ def set_loglevel(level, fmt="timed"):
     ``set_loglevel("debug")`` to get additional debugging information.
 
     Users or applications that are installing their own logging handlers
-    may want to directly manipulate ``logging.getLogger('eomaps')`` rather
+    may want to directly manipulate ``logging.getLogger('rt1_model')`` rather
     than use this function.
 
     Parameters
@@ -109,7 +109,7 @@ def set_loglevel(level, fmt="timed"):
     Notes
     -----
     The first time this function is called, an additional handler is attached
-    to the root handler of EOmaps; this handler is reused every time and this
+    to the root handler of rt1_model; this handler is reused every time and this
     function simply manipulates the logger and handler's level.
 
     """
