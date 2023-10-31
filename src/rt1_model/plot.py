@@ -752,7 +752,7 @@ class Analyze3D:
         gs = GridSpec(3, 3, width_ratios=(100, 100, 1), height_ratios=(10, 1, 0.2))
         gs.update(hspace=0.1)
 
-        rows = int(np.ceil(len(self.param_dict) / slider_cols))
+        rows = max(1, int(np.ceil(len(self.param_dict) / slider_cols)))
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-2, :-1])
 
         self.f = plt.figure(figsize=(9, 8))
