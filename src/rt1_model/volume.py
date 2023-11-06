@@ -462,6 +462,8 @@ class LinCombV(_Volume):
         # cast fractions passed as strings to sympy symbols
         self.Vchoices = [(self._parse_sympy_param(i), j) for i, j in Vchoices]
 
+        self._set_legexpansion()
+
         name = "LinCombV"
         for c in Vchoices:
             name += f"_({c[0]}, {c[1].name})"
