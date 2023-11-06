@@ -566,6 +566,37 @@ class LinCombV(_Volume):
         return Vcomb
 
 
+class Isotropic(_Volume):
+    """Define an isotropic scattering function."""
+
+    name = "Isotropic"
+    _param_names = []
+
+    def __init__(self, **kwargs):
+        super(Isotropic, self).__init__(**kwargs)
+
+    @property
+    def ncoefs(self):
+        """The number of coefficients used to approximate the phase function."""
+        # make ncoefs a property since it is fixed and should not be changed
+        # only 1 coefficient is needed to correctly represent
+        # the Isotropic scattering function
+        return 1
+
+    @property
+    @lru_cache()
+    def legcoefs(self):
+        """Legendre coefficients of the phase function."""
+        n = sp.Symbol("n")
+        return (1.0 / (4. * sp.pi)) * sp.KroneckerDelta(0, n)
+
+    @property
+    @lru_cache()
+    def _func(self):
+        """Phase function as sympy object for later evaluation."""
+        return 1.0 /  (4. * sp.pi)
+
+
 class Rayleigh(_Volume):
     """
     Rayleigh scattering function.
