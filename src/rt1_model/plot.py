@@ -829,7 +829,7 @@ class Analyze3D:
         startvals = {key: s.val for key, s in self.sliders.items()}
         inc = startvals.pop("inc")
 
-        self.R.set_params(**startvals)
+        self.R.update_params(**startvals)
         x, y, z = self._getvals(inc)
 
         if event is None:  # e.g. on init
