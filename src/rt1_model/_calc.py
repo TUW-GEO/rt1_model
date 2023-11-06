@@ -448,7 +448,7 @@ class RT1(object):
 
         self.param_dict.update({key: np.atleast_1d(val) for key, val in kwargs.items()})
 
-    def calc(self, sig0=True, dB=True):
+    def calc(self, sig0=True, dB=True, **params):
         """
         Calculate model and return result.
 
@@ -457,6 +457,18 @@ class RT1(object):
         have a look at the documentation:
         (http://rt1.readthedocs.io/en/latest/theory.html#first-order-solution-to-the-rte)
 
+        Parameters
+        ----------
+        sig0 : bool
+            Indicator if sigma0 (True) or intensity (False) values should be calculated.
+
+        dB : boold
+            Indicator if results are returned in dB (True) or linear units (False).
+            The default is True.
+
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -472,6 +484,9 @@ class RT1(object):
         Iint : array_like(float)
                Interaction contribution
         """
+
+        self.update_params(**params)
+
         if isinstance(self.tau, (int, float)):
             Isurf = self.surface()
             # differentiation for non-existing canopy, as otherwise NAN values
@@ -505,18 +520,31 @@ class RT1(object):
                 else:
                     pass
 
-        if sig0 is True:
-            signorm = 4.0 * np.pi * self._mu_0
-        else:
-            signorm = 1
-
         if self.int_Q is True:
-            ret = np.stack((Isurf + Ivol + Iint, Isurf, Ivol, Iint)) * signorm
+            ret = self._convert_sig0_db(
+                np.stack((Isurf + Ivol + Iint, Isurf, Ivol, Iint)),
+                sig0=sig0,
+                dB=dB,
+                )
         else:
-            ret = np.stack((Isurf + Ivol, Isurf, Ivol)) * signorm
+            ret = self._convert_sig0_db(
+                np.stack((Isurf + Ivol + Iint, Isurf, Ivol, Iint)),
+                sig0=sig0,
+                dB=dB,
+                )
+
+        return ret
+
+    def _convert_sig0_db(self, val, sig0=True, dB=True):
+        if sig0 is True:
+            signorm = 4. * np.pi * self._mu_0 * val
+        else:
+            signorm = 1.
+
+        ret = val * signorm
 
         if dB is True:
-            ret = 10.0 * np.log10(ret)
+            ret = 10. * np.log10(ret)
 
         return ret
 
@@ -606,15 +634,12 @@ class RT1(object):
 
     def _surface_volume(self, sig0=True, dB=True):
         # convenience function to get surface + volume (e.g. without interaction)
-        if sig0 is True:
-            signorm = 4.0 * np.pi * self._mu_0
-        else:
-            signorm = 1
 
-        ret = (self.surface() + self.volume()) * signorm
-
-        if dB is True:
-            ret = 10.0 * np.log10(ret)
+        ret = self._convert_sig0_db(
+            self.surface() + self.volume(),
+            sig0=sig0,
+            dB=dB,
+            )
 
         return ret
 
