@@ -470,7 +470,7 @@ class Analyze:
 
     """
 
-    def __init__(self, R, param_dict=None, sig0=True, dB=True, range_parameter="tau"):
+    def __init__(self, R, param_dict=None, sig0=True, dB=True, range_parameter=None):
         self._t0 = np.linspace(10, 80, 100)
         self._range_parameter = range_parameter
 
@@ -543,7 +543,7 @@ class Analyze:
         self._radio = RadioButtons(
             self._buttonax,
             params,
-            active=params.index(self._range_parameter),
+            active=params.index(self._range_parameter) if self._range_parameter else 0,
             label_props=dict(color="k", fontsize=[9]),
             radio_props={"s": [50] * len(params)},
         )
