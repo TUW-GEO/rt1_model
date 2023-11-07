@@ -135,7 +135,7 @@ class _Volume(_Scatter):
         n=1,
     ):
         """
-        Get the derivative of the BRDF with respect to the scattering-angles `t_ex`.
+        Get the derivative of p with respect to the scattering-angles `t_ex`.
 
         Parameters
         ----------
