@@ -93,16 +93,8 @@ class RT1(object):
         section of the documentation:
         (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
 
-    bsf : float (default = 0.)
-        Fraction of bare-soil (e.g. signal with no attenuation due to vegetation).
-
     int_Q : bool (default = True)
         Indicator whether the interaction-term should be calculated or not.
-
-    param_dict : dict (default = {})
-        A dictionary that is used to assign numerical values to the free parameters
-        of the model. (e.g. "tau", "omega", "NormBRDF" and all parameters required to
-        fully specify `V` and `SRF`)
 
     fn_input : array_like(sympy expression), optional (default = None)
         Optional input of pre-calculated array of sympy-expressions
@@ -135,6 +127,14 @@ class RT1(object):
         Indicator if results are returned in dB (True) or linear units (False).
         The default is True.
 
+    Attributes
+    ----------
+    param_dict : dict
+        A dictionary that is used to assign numerical values to the free parameters
+        of the model. (e.g. "tau", "omega", "NormBRDF", "bsf" and all parameters
+        required to fully specify `V` and `SRF`). The default is {"bsf": 0}.
+        Use :py:meth:`update_params` to update the used parameters!
+
     """
 
     def __init__(
@@ -148,7 +148,6 @@ class RT1(object):
         SRF=None,
         geometry="mono",
         int_Q=True,
-        param_dict=None,
         fn_input=None,
         fnevals_input=None,
         lambda_backend=_init_lambda_backend,
@@ -172,9 +171,7 @@ class RT1(object):
         assert len(geometry) == 4, "ERROR: geometry must be " + "a 4-character string"
         self.geometry = geometry
 
-        if param_dict is None:
-            param_dict = dict(bsf=0)
-        self.param_dict = param_dict
+        self.param_dict = dict(bsf=0)
 
         self.I0 = I0
         self.lambda_backend = lambda_backend
@@ -284,7 +281,7 @@ class RT1(object):
 
     @property
     def NormBRDF(self):
-        """Normalization factor for the BRDF."""
+        """Normalization factor for the surface BRDF."""
         return self._eval_param("NormBRDF")
 
     @NormBRDF.setter
@@ -314,7 +311,7 @@ class RT1(object):
 
     @property
     def bsf(self):
-        """Bare soil fraction."""
+        """Fraction of bare-soil (e.g. signal with no attenuation due to vegetation)."""
         return self._eval_param("bsf")
 
     @bsf.setter
