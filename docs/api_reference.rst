@@ -1,8 +1,6 @@
 API Reference
 -------------
 
-.. rubric:: 🐍 API Reference
-
 .. autosummary::
    :toctree: generated
    :nosignatures:
