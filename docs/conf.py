@@ -14,6 +14,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_rtd_theme",
+    "nbsphinx"
 ]
 
 autodoc_default_options = {

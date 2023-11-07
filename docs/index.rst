@@ -64,6 +64,7 @@ Additional information on how to use the RT1 model for soil-moisture retrievals 
 
    theory
    model_specification
+   examples
    contribution_guide
 
 
