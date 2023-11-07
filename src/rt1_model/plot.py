@@ -460,12 +460,6 @@ class Analyze:
         >>> {"omega": [0, .5, .2, "Omega"],
         >>>  "tau": [0, .25, .1, "Optical Depth"]}
 
-    sig0 : bool, optional
-        Indicator if plot should show backscatter-coefficient (True) or
-        relative intensity (False). The default is True.
-    dB : bool, optional
-        Indicator if plot should be in decibel (True) or natural units (False).
-        The default is True.
     range_parameter : str, optional
         If provided, the range of resulting values for the given parameter
         is overlaid on the plot (can be any parameter provided in `param_dict`).
@@ -473,7 +467,7 @@ class Analyze:
 
     """
 
-    def __init__(self, R, param_dict=None, sig0=True, dB=True, range_parameter=None):
+    def __init__(self, R, param_dict=None, range_parameter=None):
         self._t0 = np.linspace(10, 80, 100)
         self._range_parameter = range_parameter
 
@@ -496,9 +490,6 @@ class Analyze:
 
         symbs = _check_params(self.R, param_dict)
         self.param_dict = {key: val for key, val in param_dict.items() if key in symbs}
-
-        self._sig0 = sig0
-        self._dB = dB
 
         self._lines = None
         self._range_lines = set()
@@ -524,10 +515,10 @@ class Analyze:
         self.ax.set_ylabel(
             (
                 r"Backscatter Coefficient $\sigma^0$"
-                if self._sig0
-                else r"Intensity Ratio $\frac{I}{I_inc}$"
+                if self.R.sig0
+                else r"Intensity Ratio $\frac{I}{I_{inc}}$"
             )
-            + (" [db]" if self._dB else "")
+            + (" [db]" if self.R.dB else "")
         )
         self.ax.set_xlabel(r"Incidence Angle $\theta_0 [deg]$")
 
@@ -580,11 +571,11 @@ class Analyze:
     def _update(self, val):
         startvals = {key: s.val for key, s in self.sliders.items()}
         self.R.update_params(**startvals)
-        contribs = self.R.calc(sig0=self._sig0, dB=self._dB).squeeze()
+        contribs = self.R.calc().squeeze()
         labels = ["Total", "Surface", "Volume", "Interaction"]
 
         if self.R.int_Q is True:
-            sv = self.R._surface_volume(sig0=self._sig0, dB=self._dB).squeeze()
+            sv = self.R._surface_volume().squeeze()
         else:
             sv = None
 
@@ -652,16 +643,16 @@ class Analyze:
         )[:, np.newaxis]
 
         self.R.update_params(**startvals)
-        res = self.R.calc(sig0=self._sig0, dB=self._dB)
+        res = self.R.calc()
         return res
 
 
 class Analyze3D:
-    def __init__(
-        self, R, param_dict=None, sig0=True, dB=False, samples=35, contributions="ts"
-    ):
+    def __init__(self, R, param_dict=None, samples=35, contributions="ts"):
         """
         A widget to analyze the 3D scattering distribution of a selected RT1 specification.
+
+        NOTE: This function requires using linear units (e.g. `R.dB = False`)
 
         Parameters
         ----------
@@ -685,12 +676,6 @@ class Analyze3D:
             >>> {"omega": [0, .5, .2, "Omega"],
             >>>  "tau": [0, .25, .1, "Optical Depth"]}
 
-        sig0 : bool, optional
-            Indicator if plot should show backscatter-coefficient (True) or
-            relative intensity (False). The default is True.
-        dB : bool, optional
-            Indicator if plot should be in decibel (True) or natural units (False).
-            The default is True.
         samples : int, optional
             The number of samples to draw. (e.g. higher numbers result in better image
             quality but also in significantly slower update speed!)
@@ -703,10 +688,16 @@ class Analyze3D:
             The default is "ts"
         """
         self.R = R
+
+        if self.R.dB is True:
+            import warnings
+
+            warnings.warn("R.dB was set to 'False' to allow 3D visualization!")
+
+        self.R.dB = False
         self.R._clear_cache()
 
         self._samples = samples
-
 
         if R.int_Q is False and "i" in contributions:
             contributions = contributions.replace("i", "")
@@ -737,9 +728,6 @@ class Analyze3D:
         # (to avoid broadcasting issues with obsolete parameters)
         symbs = _check_params(self.R, param_dict)
         self.param_dict = {key: val for key, val in param_dict.items() if key in symbs}
-
-        self._sig0 = sig0
-        self._dB = dB
 
         self._artists = set()
 
@@ -800,7 +788,7 @@ class Analyze3D:
             geometry="fvfv",
         )
 
-        res = self.R.calc(sig0=self._sig0, dB=self._dB)
+        res = self.R.calc()
 
         x = res * np.sin(self._t_ex) * np.cos(self._p_ex)
         y = res * np.sin(self._t_ex) * np.sin(self._p_ex)
