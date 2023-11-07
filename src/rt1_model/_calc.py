@@ -236,11 +236,12 @@ class RT1(object):
 
         except ImportError as ex:
             # to provide a useful error message in case matpltolib was not found
-            def f(*args, **kwargs):
-                raise ex
+            def _getf(ex):
+                def f(*args, **kwargs):
+                    raise ex
 
-            self.analyze = f
-            self.analyze3d = f
+            self.analyze = _getf(ex)
+            self.analyze3d = _getf(ex)
 
     @property
     def _cached_props(self):
