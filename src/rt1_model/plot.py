@@ -418,8 +418,11 @@ def _check_params(R, param_dict, additional_params=[]):
     # only use parameters that are actually assigned
     # (to avoid broadcasting issues with obsolete parameters)
     ignored_params = symbs - set(param_dict)
+
     if len(ignored_params) > 0:
-        if all((i in R.param_dict for i in ignored_params)):
+        really_missing = ignored_params - set(R.param_dict)
+
+        if len(really_missing) == 0:
             _log.debug(
                 f"The parameters {ignored_params} are missing in `param_dict` "
                 f"(static values found in `R.param_dict` are used)!"
@@ -427,7 +430,7 @@ def _check_params(R, param_dict, additional_params=[]):
         else:
             raise AssertionError(
                 "The analyzer is missing parameter specifications for the "
-                f"following variables: {ignored_params}"
+                f"following variables: {really_missing}"
             )
     return symbs
 
