@@ -4,6 +4,8 @@ Core module for implementation of RT1 1st order scattering model.
 References
 ----------
 Quast & Wagner (2016): doi:10.1364/AO.55.005379
+Quast, Albergel, Calvet, Wagner (2019) : doi:10.3390/rs11030285
+
 """
 
 from functools import lru_cache, wraps
