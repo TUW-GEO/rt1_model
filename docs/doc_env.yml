@@ -1,0 +1,12 @@
+name: rt1
+channels: 
+  - conda-forge
+   
+dependencies:
+  - docutils
+  - sphinx
+  - sphinx-copybutton
+  - pip
+  - pip:
+    - sphinx_rtd_theme
+    - nbsphinx
