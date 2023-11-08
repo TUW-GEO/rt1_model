@@ -56,16 +56,22 @@ Additional information on how to use the RT1 model for soil-moisture retrievals 
    </ul>
 
 
-
 .. toctree::
    :hidden:
    :maxdepth: 1
    :caption: General
 
+   installation
+   contribtuion_guide
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Usage
+
    theory
    model_specification
    examples
-   contribution_guide
 
 
 .. toctree::
