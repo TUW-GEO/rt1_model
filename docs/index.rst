@@ -62,7 +62,7 @@ Additional information on how to use the RT1 model for soil-moisture retrievals 
    :caption: General
 
    installation
-   contribtuion_guide
+   contribution_guide
 
 .. toctree::
    :hidden:
