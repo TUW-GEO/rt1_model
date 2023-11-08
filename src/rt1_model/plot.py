@@ -808,10 +808,6 @@ class Analyze3D:
         z = np.full_like(x, 0)
         return x, y, z
 
-    def restore_slider_bg(self):
-        for s in self._slider_bgs:
-            self.f.canvas.restore_region(s)
-
     def _update(self, event):
         while len(self._artists) > 0:
             a = self._artists.pop()
