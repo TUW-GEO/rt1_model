@@ -69,44 +69,6 @@ class _Scatter(object):
         else:
             return val
 
-    def _get_legcoef(self, n0):
-        """
-        Evaluate legendre coefficients (mainly for testing purposes).
-
-        The actual coefficients are used in the symbolic expansion.
-
-        """
-        n = sp.Symbol("n")
-        return self.legcoefs.xreplace({n: int(n0)}).evalf()
-
-    def _eval_legpoly(self, t_0, t_s, p_0, p_s, geometry=None):
-        """
-        Evaluate legendre coefficients based on expansion (mainly for testing purposes).
-
-        The actual coefficient are used in the symbolic expansion.
-
-        """
-        assert geometry is not None, "Geometry needs to be specified!"
-
-        theta_0 = sp.Symbol("theta_0")
-        theta_s = sp.Symbol("theta_s")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_s = sp.Symbol("phi_s")
-        phi_ex = sp.Symbol("phi_ex")
-
-        res = self.legexpansion(t_0, t_s, p_0, p_s, geometry).xreplace(
-            {
-                theta_0: t_0,
-                theta_s: t_s,
-                phi_0: p_0,
-                phi_s: p_s,
-                theta_ex: t_s,
-                phi_ex: p_s,
-            }
-        )
-        return res.evalf()
-
     @lru_cache()
     def _lambda_func(self, *args):
         # define sympy objects
@@ -120,3 +82,45 @@ class _Scatter(object):
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(args)
         pfunc = sp.lambdify(args, self._func, modules=["numpy", "sympy"])
         return pfunc
+
+    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+        """
+        Legendre-expansion of the scattering distribution function.
+
+        .. note::
+            The incidence-angle argument of the legexpansion() is different
+            to the documentation due to the direct definition of the argument
+            as the zenith-angle (t_0) instead of the incidence-angle
+            defined in a spherical coordinate system (t_i).
+            They are related via: t_i = pi - t_0
+
+
+        Parameters
+        ----------
+        t_0 : array_like(float)
+              array of incident zenith-angles in radians
+
+        p_0 : array_like(float)
+              array of incident azimuth-angles in radians
+
+        t_ex : array_like(float)
+               array of exit zenith-angles in radians
+
+        p_ex : array_like(float)
+               array of exit azimuth-angles in radians
+
+        Returns
+        -------
+        sympy - expression
+            The Legendre expansion of the scattering distribution function.
+
+        """
+        assert self.ncoefs > 0
+
+        n = sp.Symbol("n")
+
+        return sp.Sum(
+            self.legcoefs
+            * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, self.a)),
+            (n, 0, self.ncoefs - 1),
+        )

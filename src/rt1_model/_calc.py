@@ -589,8 +589,8 @@ class RT1(object):
         array_like(float)
             Numerical value of the surface-contribution for the
             given set of parameters
-        """
 
+        """
         # bare soil contribution
         I_bs = (
             self.I0
@@ -942,13 +942,46 @@ class RT1(object):
         # preevaluate expansions for volume and surface phase functions
         # this returns symbolic code to be then further used
 
-        volexp = self.V.legexpansion(
-            self.t_0, self.t_ex, self.p_0, self.p_ex, self.geometry
-        ).doit()
+        theta_s = sp.Symbol("theta_s")
+        phi_s = sp.Symbol("phi_s")
 
-        brdfexp = self.SRF.legexpansion(
-            self.t_0, self.t_ex, self.p_0, self.p_ex, self.geometry
-        ).doit()
+        if self.geometry == "mono":
+            # handle monostatic geometry
+            theta_0 = sp.Symbol("theta_0")
+
+            p0 = np.unique(self.p_0)
+            assert len(p0) == 1, (
+                "p_0 must contain only a "
+                + "single unique value for monostatic geometry"
+            )
+
+            angs = [theta_0, theta_0, p0[0], p0[0]]
+        else:
+            # handle all possible bistatic geometry definitions
+            theta_0 = sp.Symbol("theta_0")
+            phi_0 = sp.Symbol("phi_0")
+            theta_ex = sp.Symbol("theta_ex")
+            phi_ex = sp.Symbol("phi_ex")
+
+            angs = []
+            for symb, val, g in zip(
+                (theta_0, theta_ex, phi_0, phi_ex),
+                (self.t_0, self.t_ex, self.p_0, self.p_ex),
+                self.geometry,
+            ):
+                if g == "f":
+                    fixval = np.unique(val)
+                    assert (
+                        len(fixval) == 1
+                    ), "fixed geometries must contain only a single unique value"
+                    angs.append(fixval[0])
+                elif g == "v":
+                    angs.append(symb)
+                else:
+                    raise TypeError(f"{g} is not a valid geometry specifier!")
+
+        brdfexp = self.SRF.legexpansion(theta_s, angs[1], phi_s, angs[3] + sp.pi).doit()
+        volexp = self.V.legexpansion(sp.pi - angs[0], theta_s, angs[2], phi_s).doit()
 
         # preparation of the product of p*BRDF for coefficient retrieval
         # this is the eq.23. and would need to be integrated from 0 to 2pi
@@ -1555,7 +1588,6 @@ class RT1(object):
               omega, tau and NormBRDF
 
         """
-
         if self.sig0 is True and self.dB is False:
             norm = 4.0 * np.pi * self._mu_0
         elif self.dB is True:
