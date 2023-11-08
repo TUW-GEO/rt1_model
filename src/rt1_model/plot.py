@@ -119,12 +119,6 @@ def polarplot(
     else:
         assert polarax.name == "polar", "you must provide a polar-axes!"
 
-    def angsub(ti):
-        if isinstance(X, _Surface):
-            return ti
-        elif isinstance(X, _Volume):
-            return np.pi - ti
-
     if isinstance(X, _Surface):
         if label is None:
             label = "Surface-Scattering Phase Function"
@@ -156,7 +150,7 @@ def polarplot(
             if aprox is True:
                 phasefunktapprox = sp.lambdify(
                     (*angs, *params.keys()),
-                    X.legexpansion(*angs, geometry="vvvv").doit(),
+                    X.legexpansion(*angs).doit(),
                     modules=["numpy", "sympy"],
                 )
 
@@ -187,11 +181,7 @@ def polarplot(
                 used_colors.append(color)
                 rad = getattr(X, funcname)(ti, thetass, 0.0, 0.0, param_dict=params)
                 if aprox is True:
-                    # the use of np.pi-ti stems from the definition
-                    # of legexpansion() in volume.py
-                    radapprox = phasefunktapprox(
-                        angsub(ti), thetass, 0.0, 0.0, **params
-                    )
+                    radapprox = phasefunktapprox(ti, thetass, 0.0, 0.0, **params)
                 # set theta direction to clockwise
                 polarax.set_theta_direction(-1)
                 # set theta to start at z-axis
@@ -708,8 +698,8 @@ class Analyze3D:
         self._labels = ["Total", "Surface", "Volume", "Interaction"]
         self._colors = ["C0", "C1", "C2", "C3"]
 
-        if self.R.geometry != "vvvv":
-            _log.warning("The analyze-plot shows results for 'vvvv' geometry!")
+        if self.R.geometry != "fvfv":
+            _log.warning("The analyze-plot shows results for 'fvfv' geometry!")
 
         t_ex = np.deg2rad(np.linspace(0, 89, self._samples))
         p_ex = np.deg2rad(np.linspace(-180, 180, self._samples))
@@ -717,10 +707,6 @@ class Analyze3D:
 
         if param_dict is None:
             param_dict = dict()
-
-        # param_dict.setdefault("omega", (0, 0.5))
-        # param_dict.setdefault("tau", (0, 0.5))
-        # param_dict.setdefault("NormBRDF", (0, 0.2))
 
         self._inc_range = (0.1, 89.9)
 
