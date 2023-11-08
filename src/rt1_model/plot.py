@@ -230,7 +230,7 @@ def polarplot(
                     [],
                     color=color,
                     label=r"$\theta_0$ = "
-                    + str(np.round_(np.rad2deg(ti), decimals=1))
+                    + str(np.round(np.rad2deg(ti), decimals=1))
                     + r"${}^\circ$",
                 )
             ]
