@@ -53,14 +53,6 @@ class _Scatter(object):
             + a[2] * sp.sin(t_0) * sp.sin(t_ex) * sp.sin(p_0) * sp.sin(p_ex)
         )
 
-    def _scat_angle_numeric(self, t_0, t_ex, p_0, p_ex, a):
-        # a numeric version of scat_angle
-        return (
-            a[0] * np.cos(t_0) * np.cos(t_ex)
-            + a[1] * np.sin(t_0) * np.sin(t_ex) * np.cos(p_0) * np.cos(p_ex)
-            + a[2] * np.sin(t_0) * np.sin(t_ex) * np.sin(p_0) * np.sin(p_ex)
-        )
-
     def _parse_sympy_param(self, val):
         # convenience function to set parameters as sympy.Symbols if a string
         # was used as value
@@ -81,6 +73,13 @@ class _Scatter(object):
         # sp.lambdify is used to allow array-inputs
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(args)
         pfunc = sp.lambdify(args, self._func, modules=["numpy", "sympy"])
+
+        # if _func is a constant, lambdify will create a function that returns a scalar
+        # which is not suitable for further processing. in that case, vectorize the
+        # obtained function
+        if self._func.is_constant():
+            pfunc = np.vectorize(pfunc)
+
         return pfunc
 
     def legexpansion(self, t_0, t_ex, p_0, p_ex):

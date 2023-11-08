@@ -98,28 +98,7 @@ class _Volume(_Scatter):
             Numerical value of the volume-scattering phase-function
 
         """
-        # if an explicit numeric function is provided, use it, otherwise
-        # lambdify the available sympy-function
-        if hasattr(self, "_func_numeric"):
-            pfunc = self._func_numeric
-        else:
-            pfunc = self._lambda_func(*param_dict.keys())
-        # in case _func is a constant, lambdify will produce a function with
-        # scalar output which is not suitable for further processing
-        # (this happens e.g. for the Isotropic brdf).
-        # The following query is implemented to ensure correct array-output:
-        # TODO this is not a proper test !
-        if not isinstance(
-            pfunc(
-                np.array([0.1, 0.2, 0.3]),
-                0.1,
-                0.1,
-                0.1,
-                **{key: 0.12 for key in param_dict.keys()},
-            ),
-            np.ndarray,
-        ):
-            pfunc = np.vectorize(pfunc)
+        pfunc = self._lambda_func(*param_dict.keys())
 
         return pfunc(t_0, t_ex, p_0, p_ex, **param_dict)
 
@@ -402,19 +381,6 @@ class HenyeyGreenstein(_Volume):
         )
 
         return func
-
-    # def _func_numeric(self, theta_0, theta_ex, phi_0, phi_ex, **kwargs):
-    #     """Direct numeric version of _func."""
-    #     if isinstance(self.t, sp.Symbol):
-    #         t = kwargs[str(self.t)]
-    #     else:
-    #         t = self.t
-    #     x = self._scat_angle_numeric(theta_0, theta_ex, phi_0, phi_ex, self.a)
-    #     func = (1.0 - t**2.0) / (
-    #         (4.0 * np.pi) * (1.0 + t**2.0 - 2.0 * t * x) ** 1.5
-    #     )
-
-    #     return func
 
     @property
     @lru_cache()
