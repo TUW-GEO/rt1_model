@@ -245,8 +245,6 @@ def polarplot(
         legend.get_frame().set_facecolor("w")
         legend.get_frame().set_alpha(0.5)
 
-    return fig
-
 
 def hemreflect(
     R=None,
@@ -393,8 +391,6 @@ def hemreflect(
         axnum.legend()
 
         axnum.grid()
-        return fig
-
 
 def _check_params(R, param_dict, additional_params=[]):
     # check if all required parameters for the analyzers have been defined
