@@ -8,3 +8,4 @@ Examples
    examples/analyzemodel.ipynb
    examples/fit_static_parameters.ipynb
    examples/fit_timeseries.ipynb
+   examples/fit_multi_temporal.ipynb
