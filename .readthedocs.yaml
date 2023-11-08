@@ -7,6 +7,3 @@ build:
 
 conda:
   environment: docs/doc_env.yml
-
-sphinx:
-  docs/conf.py
