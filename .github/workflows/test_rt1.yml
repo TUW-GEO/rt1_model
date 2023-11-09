@@ -6,6 +6,7 @@ on:
    workflow_dispatch:
 
 jobs:
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -14,7 +15,6 @@ jobs:
         os: [ubuntu-latest]
         # set python versions to test
         python-version: ["3.8", "3.9", "3.10"]
-
     name: setup_rt1 ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
       # checkout repository
@@ -44,6 +44,7 @@ jobs:
         run: |
           pip install -e .
           python -m pytest --cov=eomaps --cov-report=xml
+
        - name: Upload coverage to Codecov
          uses: codecov/codecov-action@v3
          with:
