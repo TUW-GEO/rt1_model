@@ -155,3 +155,124 @@ class _Scatter(object):
 
         return brdffunc(t_0, t_ex, p_0, p_ex, **param_dict)
 
+class _LinComb(_Scatter):
+    """
+    Class to generate linear-combinations of scattering distribution functions.
+
+    For details please look at the documentation
+    (http://rt1.readthedocs.io/en/latest/model_specification.html#linear-combination-of-scattering-distributions)
+
+    Parameters
+    ----------
+    choices : [ [float, ScatterObject] , [float, ScatterObject] ,  ...]
+        A list that contains the the individual scattering functions
+        and the associated weighting-factors (floats) for the linear-combination.
+
+    """
+    name = "LinComb"
+    _param_names = ["choices"]
+
+    def __init__(self, choices=None, **kwargs):
+        super().__init__(**kwargs)
+        # cast fractions passed as strings to sympy symbols
+        self.choices = [(self._parse_sympy_param(i), j) for i, j in choices]
+
+        self._comb = self._combine()
+        self._set_legexpansion()
+
+        name = "LinComb"
+        for c in self.choices:
+            name += f"_({c[0]}, {c[1].name})"
+        self.name = name
+
+
+    @property
+    @lru_cache()
+    def _func(self):
+        """Phase function as sympy object for later evaluation."""
+        return self._comb._func
+
+    def _set_legexpansion(self):
+        """Set legexpansion to the combined legexpansion."""
+        self.ncoefs = self._comb.ncoefs
+        self.legexpansion = self._comb.legexpansion
+
+    def _combine(self):
+        """
+        Get a combined Surface object based on an input-array of Surface objects.
+
+        The array must be shaped in the form:
+            choices = [  [ weighting-factor   ,   Surface-class element ],
+                            [ weighting-factor   ,   Surface-class element ],
+                        ...]
+
+        ATTENTION: the .legexpansion()-function of the combined surface-class
+        element is no longer related to its legcoefs (which are set to 0.)
+                   since the individual legexpansions of the combined surface-
+                   class elements are possibly evaluated with a different
+                   a-parameter of the generalized scattering angle! This does
+                   not affect any calculations, since the evaluation is
+                   only based on the use of the .legexpansion()-function.
+        """
+
+        class _Dummy(_Scatter):
+            """Dummy-class used to generate linear-combinations of BRDFs."""
+
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+
+                self._func = 0.0
+                self.legcoefs = 0.0
+
+        # initialize a combined phase-function class element
+        comb = _Dummy()
+        # set ncoefs of the combined volume-class element to the maximum
+        comb.ncoefs = max([i[1].ncoefs for i in self.choices])
+        #   number of coefficients within the chosen functions.
+        #   (this is necessary for correct evaluation of fn-coefficients)
+
+        # find BRDF functions with equal a parameters
+        equals = [
+            np.where(
+                (np.array([cc[1].a for cc in self.choices]) == tuple(c[1].a)).all(
+                    axis=1
+                )
+            )[0]
+            for c in self.choices
+        ]
+
+        # evaluate index of functions that have equal a parameter
+
+        # find phase functions where a-parameter is equal
+        equal_a = list({tuple(row) for row in equals})
+
+        # evaluation of combined expansion in legendre-polynomials
+        dummylegexpansion = []
+        for i in range(0, len(equal_a)):
+            dummy = _Dummy()
+            # select SRF choices where a parameter is equal
+            equals = np.take(self.choices, equal_a[i], axis=0)
+            # set ncoefs to the maximum number within the choices
+            # with equal a-parameter
+            dummy.ncoefs = max([SRF[1].ncoefs for SRF in equals])
+            # loop over phase-functions with equal a-parameter
+            for eq in equals:
+                # set parameters based on chosen phase-functions and evaluate
+                # combined legendre-expansion
+                dummy.a = eq[1].a
+                dummy._func = dummy._func + eq[1]._func * eq[0]
+                dummy.legcoefs += eq[1].legcoefs * eq[0]
+
+            dummylegexpansion = dummylegexpansion + [dummy.legexpansion]
+
+        # combine legendre-expansions for each a-parameter based on given
+        # combined legendre-coefficients
+        comb.legexpansion = lambda t_0, t_ex, p_0, p_ex: np.sum(
+            [lexp(t_0, t_ex, p_0, p_ex) for lexp in dummylegexpansion]
+        )
+
+        for c in self.choices:
+            # set parameters based on chosen classes to define analytic
+            # function representation
+            comb._func = comb._func + c[1]._func * c[0]
+        return comb

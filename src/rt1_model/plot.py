@@ -122,7 +122,6 @@ def polarplot(
     if isinstance(X, _Surface):
         if label is None:
             label = "Surface-Scattering Phase Function"
-        funcname = "brdf"
         angs = ["theta_ex", "theta_s", "phi_ex", "phi_s"]
 
         thetass = np.arange(-np.pi / 2.0, np.pi / 2.0, 0.01)
@@ -137,7 +136,6 @@ def polarplot(
         if label is None:
             label = "Volume-Scattering Phase Function"
 
-        funcname = "p"
         angs = ["theta_0", "theta_s", "phi_0", "phi_s"]
 
         thetass = np.arange(0.0, 2.0 * np.pi, 0.01)
@@ -161,7 +159,7 @@ def polarplot(
             for i in plottis:
                 ts = np.arange(0.0, 2.0 * np.pi, 0.01)
                 pmax_i = multip * np.max(
-                    getattr(X, funcname)(
+                    X.calc(
                         np.full_like(ts, i),
                         ts,
                         0.0,
@@ -179,7 +177,7 @@ def polarplot(
             for ti in plottis:
                 color = next(colors)
                 used_colors.append(color)
-                rad = getattr(X, funcname)(ti, thetass, 0.0, 0.0, param_dict=params)
+                rad = X.calc(ti, thetass, 0.0, 0.0, param_dict=params)
                 if aprox is True:
                     radapprox = phasefunktapprox(ti, thetass, 0.0, 0.0, **params)
                 # set theta direction to clockwise

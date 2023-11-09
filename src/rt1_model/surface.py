@@ -5,7 +5,7 @@ from functools import partial, update_wrapper, lru_cache
 import numpy as np
 import sympy as sp
 
-from ._scatter import _Scatter
+from ._scatter import _Scatter, _LinComb
 
 
 class _Surface(_Scatter):
@@ -49,7 +49,7 @@ class _Surface(_Scatter):
     @property
     def init_dict(self):
         """Get a dict that can be used to initialize the BRDF."""
-        if self.name.startswith("LinCombSRF"):
+        if self.name.startswith("LinComb"):
             d = dict()
             for key in self._param_names:
                 val = self.__dict__[key]
@@ -57,15 +57,15 @@ class _Surface(_Scatter):
                     d[key] = str(val)
                 else:
                     d[key] = val
-            d["SRF_name"] = "LinCombSRF"
+            d["SRF_name"] = "LinComb"
             srfchoices = []
-            for frac, srf in d["SRFchoices"]:
+            for frac, srf in d["choices"]:
                 if isinstance(frac, sp.Basic):
                     srfchoices.append([str(frac), srf.init_dict])
                 else:
                     srfchoices.append([frac, srf.init_dict])
 
-            d["SRFchoices"] = srfchoices
+            d["choices"] = srfchoices
         else:
             d = dict()
             for key in self._param_names:
@@ -77,127 +77,13 @@ class _Surface(_Scatter):
             d["SRF_name"] = self.name
         return d
 
-class LinCombSRF(_Surface):
-    """
-    Class to generate linear-combinations of volume-class elements.
 
-    For details please look at the documentation
-    (http://rt1.readthedocs.io/en/latest/model_specification.html#linear-combination-of-scattering-distributions)
+class LinComb(_LinComb, _Surface):
+    # docstring hinherited
+    name = "LinComb"
 
-    Parameters
-    ----------
-    SRFchoices : [ [float, Surface]  ,  [float, Surface]  ,  ...]
-                 A list that contains the the individual BRDF's
-                 (Surface-objects) and the associated weighting-factors
-                 (floats) for the linear-combination.
-    """
-
-    name = "LinCombSRF"
-    _param_names = ["SRFchoices"]
-
-    def __init__(self, SRFchoices=None, **kwargs):
-        super(LinCombSRF, self).__init__(**kwargs)
-
-        # cast fractions passed as strings to sympy symbols
-        self.SRFchoices = [(self._parse_sympy_param(i), j) for i, j in SRFchoices]
-
-        self._set_legexpansion()
-
-        name = "LinCombSRF"
-        for c in self.SRFchoices:
-            name += f"_({c[0]}, {c[1].name})"
-        self.name = name
-
-    @property
-    @lru_cache()
-    def _func(self):
-        """Phase function as sympy object for later evaluation."""
-        return self._SRFcombiner()._func
-
-    def _set_legexpansion(self):
-        """Set legexpansion to the combined legexpansion."""
-        self.ncoefs = self._SRFcombiner().ncoefs
-        self.legexpansion = self._SRFcombiner().legexpansion
-
-    def _SRFcombiner(self):
-        """
-        Get a combined Surface object based on an input-array of Surface objects.
-
-        The array must be shaped in the form:
-            SRFchoices = [  [ weighting-factor   ,   Surface-class element ],
-                            [ weighting-factor   ,   Surface-class element ],
-                        ...]
-
-        ATTENTION: the .legexpansion()-function of the combined surface-class
-        element is no longer related to its legcoefs (which are set to 0.)
-                   since the individual legexpansions of the combined surface-
-                   class elements are possibly evaluated with a different
-                   a-parameter of the generalized scattering angle! This does
-                   not affect any calculations, since the evaluation is
-                   only based on the use of the .legexpansion()-function.
-        """
-
-        class BRDFfunction(_Surface):
-            """Dummy-class used to generate linear-combinations of BRDFs."""
-
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
-
-                self._func = 0.0
-                self.legcoefs = 0.0
-
-        # initialize a combined phase-function class element
-        SRFcomb = BRDFfunction()
-        # set ncoefs of the combined volume-class element to the maximum
-        SRFcomb.ncoefs = max([SRF[1].ncoefs for SRF in self.SRFchoices])
-        #   number of coefficients within the chosen functions.
-        #   (this is necessary for correct evaluation of fn-coefficients)
-
-        # find BRDF functions with equal a parameters
-        equals = [
-            np.where(
-                (np.array([VV[1].a for VV in self.SRFchoices]) == tuple(V[1].a)).all(
-                    axis=1
-                )
-            )[0]
-            for V in self.SRFchoices
-        ]
-
-        # evaluate index of BRDF-functions that have equal a parameter
-
-        # find phase functions where a-parameter is equal
-        equal_a = list({tuple(row) for row in equals})
-
-        # evaluation of combined expansion in legendre-polynomials
-        dummylegexpansion = []
-        for i in range(0, len(equal_a)):
-            SRFdummy = BRDFfunction()
-            # select SRF choices where a parameter is equal
-            SRFequal = np.take(self.SRFchoices, equal_a[i], axis=0)
-            # set ncoefs to the maximum number within the choices
-            # with equal a-parameter
-            SRFdummy.ncoefs = max([SRF[1].ncoefs for SRF in SRFequal])
-            # loop over phase-functions with equal a-parameter
-            for SRF in SRFequal:
-                # set parameters based on chosen phase-functions and evaluate
-                # combined legendre-expansion
-                SRFdummy.a = SRF[1].a
-                SRFdummy._func = SRFdummy._func + SRF[1]._func * SRF[0]
-                SRFdummy.legcoefs += SRF[1].legcoefs * SRF[0]
-
-            dummylegexpansion = dummylegexpansion + [SRFdummy.legexpansion]
-
-        # combine legendre-expansions for each a-parameter based on given
-        # combined legendre-coefficients
-        SRFcomb.legexpansion = lambda t_0, t_ex, p_0, p_ex: np.sum(
-            [lexp(t_0, t_ex, p_0, p_ex) for lexp in dummylegexpansion]
-        )
-
-        for SRF in self.SRFchoices:
-            # set parameters based on chosen classes to define analytic
-            # function representation
-            SRFcomb._func = SRFcomb._func + SRF[1]._func * SRF[0]
-        return SRFcomb
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class Isotropic(_Surface):

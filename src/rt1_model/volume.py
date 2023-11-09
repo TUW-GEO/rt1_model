@@ -5,7 +5,7 @@ from functools import partial, update_wrapper, lru_cache
 import numpy as np
 import sympy as sp
 
-from ._scatter import _Scatter
+from ._scatter import _Scatter, _LinComb
 
 
 class _Volume(_Scatter):
@@ -46,7 +46,7 @@ class _Volume(_Scatter):
     @property
     def init_dict(self):
         """Get a dict that can be used to initialize the BRDF."""
-        if self.name.startswith("LinCombV"):
+        if self.name.startswith("LinComb"):
             d = dict()
             for key in self._param_names:
                 val = self.__dict__[key]
@@ -54,15 +54,15 @@ class _Volume(_Scatter):
                     d[key] = str(val)
                 else:
                     d[key] = val
-            d["V_name"] = "LinCombV"
+            d["V_name"] = "LinComb"
             srfchoices = []
-            for frac, srf in d["Vchoices"]:
+            for frac, srf in d["choices"]:
                 if isinstance(frac, sp.Basic):
                     srfchoices.append([str(frac), srf.init_dict])
                 else:
                     srfchoices.append([frac, srf.init_dict])
 
-            d["Vchoices"] = srfchoices
+            d["choices"] = srfchoices
         else:
             d = dict()
             for key in self._param_names:
@@ -74,136 +74,12 @@ class _Volume(_Scatter):
             d["V_name"] = self.name
         return d
 
-class LinCombV(_Volume):
-    """
-    Class to generate linear-combinations of volume-class elements.
 
-    For details please look at the documentation
-    (http://rt1.readthedocs.io/en/latest/model_specification.html#linear-combination-of-scattering-distributions)
+class LinComb(_LinComb, _Volume):
+    name = "LinComb"
 
-    .. note::
-        Since the normalization of a volume-scattering phase-function is fixed,
-        the weighting-factors must equate to 1!
-
-    Parameters
-    ----------
-    Vchoices : [ [float, Volume]  ,  [float, Volume]  ,  ...]
-               a list that contains the the individual phase-functions
-               (Volume-objects) and the associated weighting-factors
-               (floats) of the linear-combination.
-    """
-
-    name = "LinCombV"
-    _param_names = ["Vchoices"]
-
-    def __init__(self, Vchoices=None, **kwargs):
-        super().__init__(**kwargs)
-
-        # cast fractions passed as strings to sympy symbols
-        self.Vchoices = [(self._parse_sympy_param(i), j) for i, j in Vchoices]
-
-        self._set_legexpansion()
-
-        name = "LinCombV"
-        for c in Vchoices:
-            name += f"_({c[0]}, {c[1].name})"
-        self.name = name
-
-    @property
-    @lru_cache()
-    def _func(self):
-        """Phase function as sympy object for later evaluation."""
-        return self._Vcombiner()._func
-
-    def _set_legexpansion(self):
-        """Set legexpansion to the combined legexpansion."""
-        self.ncoefs = self._Vcombiner().ncoefs
-        self.legexpansion = self._Vcombiner().legexpansion
-
-    def _Vcombiner(self):
-        """
-        Get a combined Volume object based on an input-array of Volume objects.
-
-        The array must be shaped in the form:
-            Vchoices = [  [ weighting-factor   ,   Volume-class element ]  ,
-                          [ weighting-factor   ,   Volume-class element ]  ,
-                          ...]
-
-        In order to keep the normalization of the phase-functions correct,
-        the sum of the weighting factors must equate to 1!
-
-        Attention
-        ---------
-            the .legexpansion()-function of the combined volume-class
-            element is no longer related to its legcoefs (which are set to 0.)
-            since the individual legexpansions of the combined volume-class
-            elements are possibly evaluated with a different a-parameter
-            of the generalized scattering angle! This does not affect any
-            calculations, since the evaluation is exclusively based on the
-            use of the .legexpansion()-function.
-        """
-
-        class Phasefunction(_Volume):
-            """Dummy-class used to generate linear-combinations of phase functions."""
-
-            def __init__(self, **kwargs):
-                super(Phasefunction, self).__init__(**kwargs)
-                self._func = 0.0
-                self.legcoefs = 0.0
-
-        # find phase functions with equal a parameters
-        equals = [
-            np.where(
-                (np.array([VV[1].a for VV in self.Vchoices]) == tuple(V[1].a)).all(
-                    axis=1
-                )
-            )[0]
-            for V in self.Vchoices
-        ]
-
-        # evaluate index of phase-functions that have equal a parameter
-        equal_a = list({tuple(row) for row in equals})
-
-        # initialize a combined phase-function class element
-
-        # initialize the combined phase-function
-        Vcomb = Phasefunction()
-        # set ncoefs of the combined volume-class element to the maximum
-        Vcomb.ncoefs = max([V[1].ncoefs for V in self.Vchoices])
-        #   number of coefficients within the chosen functions.
-        #   (this is necessary for correct evaluation of fn-coefficients)
-
-        # evaluation of combined expansion in legendre-polynomials
-        dummylegexpansion = []
-        for i in range(0, len(equal_a)):
-            Vdummy = Phasefunction()
-            # select V choices where a parameter is equal
-            Vequal = np.take(self.Vchoices, equal_a[i], axis=0)
-            # set ncoefs to the maximum number within the choices with
-            # equal a-parameter
-            Vdummy.ncoefs = max([V[1].ncoefs for V in Vequal])
-            # loop over phase-functions with equal a-parameter
-            for V in Vequal:
-                # set parameters based on chosen phase-functions and evaluate
-                # combined legendre-expansion
-                Vdummy.a = V[1].a
-                Vdummy._func = Vdummy._func + V[1]._func * V[0]
-                Vdummy.legcoefs = Vdummy.legcoefs + V[1].legcoefs * V[0]
-
-            dummylegexpansion = dummylegexpansion + [Vdummy.legexpansion]
-
-        # combine legendre-expansions for each a-parameter based on given
-        # combined legendre-coefficients
-        Vcomb.legexpansion = lambda t_0, t_ex, p_0, p_ex: np.sum(
-            [lexp(t_0, t_ex, p_0, p_ex) for lexp in dummylegexpansion]
-        )
-
-        for V in self.Vchoices:
-            # set parameters based on chosen classes to define analytic
-            # function representation
-            Vcomb._func = Vcomb._func + V[1]._func * V[0]
-
-        return Vcomb
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class Isotropic(_Volume):
