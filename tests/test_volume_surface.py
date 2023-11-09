@@ -14,7 +14,7 @@ class TestBasicPlotting(unittest.TestCase):
                 isinstance(val, type)
                 and issubclass(val, surface._Surface)
                 and not key.startswith("_")
-                and not key in ["LinCombSRF"]
+                and not key in ["LinComb"]
             )
         ]
 
@@ -25,7 +25,7 @@ class TestBasicPlotting(unittest.TestCase):
                 isinstance(val, type)
                 and issubclass(val, volume._Volume)
                 and not key.startswith("_")
-                and not key in ["LinCombV"]
+                and not key in ["LinComb"]
             )
         ]
 
@@ -66,6 +66,8 @@ class TestBasicPlotting(unittest.TestCase):
                 )
 
             SRF.calc(0.1, 0.2, 0.3, 0.4)
+            SRF.legexpansion(.1,.2,.3,.4)
+            func = SRF._func
 
     def test_volume_init(self):
         a = [-0.5, 0.6, 0.4]
@@ -105,7 +107,46 @@ class TestBasicPlotting(unittest.TestCase):
 
             # evaluate function numerical
             V.calc(0.1, 0.2, 0.3, 0.4)
+            V.legexpansion(.1,.2,.3,.4)
+            func = V._func
 
+
+    def test_linear_combinations_SRF(self):
+        a = [0.1, 0.2, 0.3]
+
+        choices = dict(
+            Isotropic=dict(),
+            CosineLobe=dict(i=3, ncoefs=10, a=a),
+            HenyeyGreenstein=dict(t=0.4, ncoefs=10, a=a),
+            HG_nadirnorm=dict(t=0.4, ncoefs=10, a=a),
+        )
+
+        choices = [(1/len(choices), getattr(surface, name)(**kwargs)) for name, kwargs in choices.items()]
+
+        SRF = surface.LinComb(choices)
+
+        SRF.calc(.1,.2,.3,.4)
+        SRF.legexpansion(.1,.2,.3,.4)
+        func = SRF._func
+
+
+    def test_linear_combinations_V(self):
+        a = [0.1, 0.2, 0.3]
+
+        choices = dict(
+            Isotropic=dict(),
+            Rayleigh=dict(a=a),
+            HenyeyGreenstein=dict(t=0.4, ncoefs=10, a=a),
+            HGRayleigh=dict(t=0.3, ncoefs=10, a=a),
+        )
+
+        choices = [(1/len(choices), getattr(volume, name)(**kwargs)) for name, kwargs in choices.items()]
+
+        V = volume.LinComb(choices)
+
+        V.calc(.1,.2,.3,.4)
+        V.legexpansion(.1,.2,.3,.4)
+        func = V._func
 
 if __name__ == "__main__":
     unittest.main()
