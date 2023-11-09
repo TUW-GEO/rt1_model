@@ -1,7 +1,7 @@
 name: rt1
-channels: 
+channels:
   - conda-forge
-   
+
 dependencies:
   - docutils
   - sphinx

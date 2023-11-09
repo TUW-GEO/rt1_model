@@ -189,7 +189,7 @@ Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solutio
 .. admonition:: Example
 
 	In the following, a simple example on how to evaluate the fn-coefficients is given.
-	The ground is hereby defined as a Lambertian-surface and the covering layer is assumed to consist of Rayleigh-particles. Thus, we have: (:math:`R_0` hereby denotes the diffuse albedo of the surface) 
+	The ground is hereby defined as a Lambertian-surface and the covering layer is assumed to consist of Rayleigh-particles. Thus, we have: (:math:`R_0` hereby denotes the diffuse albedo of the surface)
 
     .. math::
        &BRDF(\theta, \phi, \theta_{ex},\phi_{ex}) = \frac{R_0}{\pi}
@@ -199,7 +199,7 @@ Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solutio
     Evaluation of the fn coefficients:
 	.. math::
 	   &INT = \int_0^{2\pi} p(\theta_0, \phi_0, \theta,\phi) * BRDF(\pi-\theta, \phi, \theta_{ex},\phi_{ex}) d\phi =
-	   \\&\frac{3 R_0}{16 \pi^2} \int\limits_{0}^{2\pi}  \Big(1+[\cos(\theta_0)\cos(\theta) + \sin(\theta_0)\sin(\theta)\cos(\phi_0 - \phi)]^2\Big) d\phi = 
+	   \\&\frac{3 R_0}{16 \pi^2} \int\limits_{0}^{2\pi}  \Big(1+[\cos(\theta_0)\cos(\theta) + \sin(\theta_0)\sin(\theta)\cos(\phi_0 - \phi)]^2\Big) d\phi =
 	   \\&\frac{3 R_0}{16 \pi^2} \int\limits_0^{2\pi} \Big(1+ \mu_0^2 \mu^2 + 2 \mu_0 \mu \sin(\theta_0) \sin(\theta) \cos(\phi_0 - \phi) + (1-\mu_0)^2(1-\mu)^2 \cos(\phi_0 - \phi)^2\Big) d\phi
 
 	where the shorthand-notation :math:`\mu_x = \cos(\theta_x)` has been introduced.

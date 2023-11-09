@@ -1,8 +1,8 @@
 Contribution Guide
 ------------------
 
-To install the ``rt1_model`` package in editable mode, 
-first clone the repository, then navigate to the parent directory 
+To install the ``rt1_model`` package in editable mode,
+first clone the repository, then navigate to the parent directory
 (containing the ``pyproject.toml`` file) and execute the following command:
 
 .. code-block:: console

@@ -14,16 +14,16 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_rtd_theme",
-    "nbsphinx"
+    "nbsphinx",
 ]
 
 autodoc_default_options = {
     "members": True,
     "undoc-members": True,
-    "private-members": False
+    "private-members": False,
 }
 
-numfig=True
+numfig = True
 
 # -- Options for EPUB output
 epub_show_urls = "footnote"
@@ -33,7 +33,7 @@ html_static_path = ["_static"]
 
 
 html_css_files = [
-    'custom_css.css',
+    "custom_css.css",
 ]
 
 html_theme = "sphinx_rtd_theme"

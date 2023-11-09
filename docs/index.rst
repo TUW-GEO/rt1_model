@@ -4,7 +4,7 @@ RT1 model documentation
 Welcome to the documentation for the **RT1 python module**!
 
 
-The `RT1` package implements a bistatic first order scattering radiative transfer model that might be used for generic purposes. 
+The `RT1` package implements a bistatic first order scattering radiative transfer model that might be used for generic purposes.
 
 Unique features of this model are:
 
@@ -17,7 +17,7 @@ Unique features of this model are:
 Credits and References
 ----------------------
 
-`RT1` is provided as open-source software, hoping that it will help you in your research. 
+`RT1` is provided as open-source software, hoping that it will help you in your research.
 The developers would very much appreciate to receive feedback how the model is used. Also contributions and suggestions for further improvements are highly welcome.
 
 
@@ -28,7 +28,7 @@ When you are using `RT1` as part of your publications, please give the developer
 
 
 .. raw:: html
-   
+
    <ul>
    <li>
    <a href=https://opg.optica.org/ao/viewmedia.cfm?uri=ao-55-20-5379&html=true>
@@ -46,7 +46,7 @@ When you are using `RT1` as part of your publications, please give the developer
 Additional information on how to use the RT1 model for soil-moisture retrievals can be found in:
 
 .. raw:: html
-   
+
    <ul>
    <li>
    <a href=https://www.sciencedirect.com/science/article/pii/S003442572300202X>
@@ -62,7 +62,7 @@ Additional information on how to use the RT1 model for soil-moisture retrievals 
    :caption: General
 
    installation
-   contribution_guide
+   contribtuion_guide
 
 .. toctree::
    :hidden:
@@ -80,4 +80,3 @@ Additional information on how to use the RT1 model for soil-moisture retrievals 
    :caption: API Reference
 
    api_reference
-

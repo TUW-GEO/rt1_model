@@ -392,6 +392,7 @@ def hemreflect(
 
         axnum.grid()
 
+
 def _check_params(R, param_dict, additional_params=[]):
     # check if all required parameters for the analyzers have been defined
     symbs = {
