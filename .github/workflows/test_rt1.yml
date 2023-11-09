@@ -36,6 +36,10 @@ jobs:
 
           auto-activate-base: false
           auto-update-conda: true
+
+          run: |
+            pip install -e .
+
       # run pytest
       - name: test_rt1
         # do this to ensure proper activation of conda environment
