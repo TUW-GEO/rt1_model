@@ -6,6 +6,7 @@ dependencies:
   - docutils
   - sphinx
   - sphinx-copybutton
+  - matplotlib-base
   - pip
   - pip:
     - sphinx_rtd_theme
