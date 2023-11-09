@@ -7,3 +7,9 @@ build:
 
 conda:
   environment: docs/doc_env.yml
+
+python:
+  install:
+    # Install our python package before building the docs
+    - method: pip
+      path: .
