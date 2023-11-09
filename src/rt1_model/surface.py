@@ -308,8 +308,7 @@ class CosineLobe(_Surface):
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
-        # A13   The Rational(is needed as otherwise a Gamma function
-        # Pole error is issued)
+        # A13   The Rational(is needed as otherwise a Gamma function Pole error is issued)
         return (
             1.0
             / sp.pi
