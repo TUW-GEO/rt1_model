@@ -30,10 +30,15 @@ For plotting:
 
 - `matplotlib <https://matplotlib.org/>`_
 
+
 To build the docs
 ~~~~~~~~~~~~~~~~~
 
 - `sphinx <https://www.sphinx-doc.org/en/master/>`_
-- `nbsphinx <https://github.com/spatialaudio/nbsphinx/>`_
 - `sphinx_rtd_theme <https://github.com/readthedocs/sphinx_rtd_theme>`_
 - `sphinx_copybutton <https://github.com/executablebooks/sphinx-copybutton>`_
+
+To render jupyter notebooks in the docs:
+
+- `nbsphinx <https://github.com/spatialaudio/nbsphinx/>`_
+- `ipython <https://ipython.org/>`_
