@@ -3,5 +3,5 @@ __pycache__
 *.egg-info
 docs/build/*
 docs/generated/*
-*/.ipynb_checkpoints/*
+docs/examples/.ipynb_checkpoints/*
 .virtual_documents/*
