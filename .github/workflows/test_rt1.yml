@@ -1,0 +1,52 @@
+name: test_Maps
+
+on:
+   pull_request:
+   # to trigger workflow manually from actions-tab
+   workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # set operating systems to test
+        os: [ubuntu-latest]
+        # set python versions to test
+        python-version: ["3.8", "3.9", "3.10"]
+
+    name: setup_rt1 ${{ matrix.os }}  ${{ matrix.python-version }}
+    steps:
+      # checkout repository
+      - uses: actions/checkout@v3
+      # install miniconda environment
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: tests/test_env.yml
+
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+
+          activate-environment: rt1
+
+          show-channel-urls: true
+          use-only-tar-bz2: true
+
+          python-version: ${{ matrix.python-version }}
+
+          auto-activate-base: false
+          auto-update-conda: true
+      # run pytest
+      - name: test_rt1
+        # do this to ensure proper activation of conda environment
+        shell: bash -l {0}
+        run: |
+          python -m pytest --cov=eomaps --cov-report=xml
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     env_vars: ${{ matrix.os }}, ${{ matrix.python-version }}
+      #     name: maps_coverage
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     fail_ci_if_error: true
+      #     verbose: true
