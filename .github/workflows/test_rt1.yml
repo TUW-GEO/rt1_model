@@ -37,14 +37,12 @@ jobs:
           auto-activate-base: false
           auto-update-conda: true
 
-          run: |
-            pip install -e .
-
       # run pytest
       - name: test_rt1
         # do this to ensure proper activation of conda environment
         shell: bash -l {0}
         run: |
+          pip install -e .
           python -m pytest --cov=eomaps --cov-report=xml
       # - name: Upload coverage to Codecov
       #   uses: codecov/codecov-action@v3
