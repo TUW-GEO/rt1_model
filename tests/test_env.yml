@@ -1,0 +1,10 @@
+name: rt1
+channels:
+  - conda-forge
+
+dependencies:
+  - numpy
+  - sympy
+  - scipy
+  - python-symengine
+  - matplotlib

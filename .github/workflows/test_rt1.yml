@@ -1,4 +1,4 @@
-name: test_Maps
+name: test_rt1
 
 on:
    pull_request:
