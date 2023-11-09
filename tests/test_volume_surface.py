@@ -67,7 +67,8 @@ class TestBasicPlotting(unittest.TestCase):
 
             SRF.calc(0.1, 0.2, 0.3, 0.4)
             SRF.legexpansion(.1,.2,.3,.4)
-            func = SRF._func
+            SRF._func
+            SRF.init_dict
 
     def test_volume_init(self):
         a = [-0.5, 0.6, 0.4]
@@ -108,7 +109,8 @@ class TestBasicPlotting(unittest.TestCase):
             # evaluate function numerical
             V.calc(0.1, 0.2, 0.3, 0.4)
             V.legexpansion(.1,.2,.3,.4)
-            func = V._func
+            V._func
+            V.init_dict
 
 
     def test_linear_combinations_SRF(self):
@@ -127,8 +129,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         SRF.calc(.1,.2,.3,.4)
         SRF.legexpansion(.1,.2,.3,.4)
-        func = SRF._func
-
+        SRF._func
+        SRF.init_dict
 
     def test_linear_combinations_V(self):
         a = [0.1, 0.2, 0.3]
@@ -146,7 +148,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         V.calc(.1,.2,.3,.4)
         V.legexpansion(.1,.2,.3,.4)
-        func = V._func
+        V._func
+        V.init_dict
 
 if __name__ == "__main__":
     unittest.main()
