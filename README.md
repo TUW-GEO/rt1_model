@@ -1,4 +1,6 @@
-[![test_rt1](https://github.com/TUW-GEO/rt1_model/actions/workflows/test_rt1.yml/badge.svg)](https://github.com/TUW-GEO/rt1_model/actions/workflows/test_rt1.yml) [![Documentation Status](https://readthedocs.org/projects/rt1-model/badge/?version=latest)](https://rt1-model.readthedocs.io/en/latest/?badge=latest)
+[![test_rt1](https://github.com/TUW-GEO/rt1_model/actions/workflows/test_rt1.yml/badge.svg)](https://github.com/TUW-GEO/rt1_model/actions/workflows/test_rt1.yml) 
+[![codecov](https://codecov.io/gh/TUW-GEO/rt1_model/graph/badge.svg?token=UhC7x15MER)](https://codecov.io/gh/TUW-GEO/rt1_model)
+[![Documentation Status](https://readthedocs.org/projects/rt1-model/badge/?version=latest)](https://rt1-model.readthedocs.io/en/latest/?badge=latest)
 
 # RT1 model - A bistatic scattering model for first order scattering of random media.
 
