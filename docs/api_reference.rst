@@ -1,10 +1,24 @@
 API Reference
 -------------
 
+
+.. currentmodule:: rt1_model
+
 .. autosummary::
    :toctree: generated
    :nosignatures:
-   :template: custom-module-template.rst
    :recursive:
+   :template: custom-class-template.rst
 
-   rt1_model
+   RT1
+
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :recursive:
+   :template: custom-module-template.rst
+
+   surface
+   volume
+   plot

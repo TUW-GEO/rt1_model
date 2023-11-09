@@ -17,11 +17,13 @@ extensions = [
     "nbsphinx",
 ]
 
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": True,
-    "private-members": False,
-}
+autosummary_generate = ["api_reference.rst"]
+
+#autodoc_default_options = {
+#    "members": True,
+#    "undoc-members": False,
+#    "private-members": False,
+#}
 
 numfig = True
 
