@@ -74,35 +74,6 @@ class _Volume(_Scatter):
             d["V_name"] = self.name
         return d
 
-    def p(self, t_0, t_ex, p_0, p_ex, param_dict={}):
-        """
-        Evaluate the phase-function for chosen incidence- and exit angles.
-
-        Parameters
-        ----------
-        t_0 : array_like(float)
-              array of incident zenith-angles in radians
-
-        p_0 : array_like(float)
-              array of incident azimuth-angles in radians
-
-        t_ex : array_like(float)
-               array of exit zenith-angles in radians
-
-        p_ex : array_like(float)
-               array of exit azimuth-angles in radians
-
-        Returns
-        -------
-        array_like(float)
-            Numerical value of the volume-scattering phase-function
-
-        """
-        pfunc = self._lambda_func(*param_dict.keys())
-
-        return pfunc(t_0, t_ex, p_0, p_ex, **param_dict)
-
-
 class LinCombV(_Volume):
     """
     Class to generate linear-combinations of volume-class elements.

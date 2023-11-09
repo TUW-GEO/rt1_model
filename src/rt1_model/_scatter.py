@@ -123,3 +123,32 @@ class _Scatter(object):
             * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, self.a)),
             (n, 0, self.ncoefs - 1),
         )
+
+    def calc(self, t_0, t_ex, p_0, p_ex, param_dict={}):
+        """
+        Calculate numerical value of the scattering function.
+
+        Parameters
+        ----------
+        t_0 : array_like(float)
+            Incident zenith-angles in radians
+        p_0 : array_like(float)
+            Incident azimuth-angles in radians
+        t_ex : array_like(float)
+            Exit zenith-angles in radians
+        p_ex : array_like(float)
+            Exit azimuth-angles in radians
+        param_dict: dict
+            A dict of parameter-values (or arrays of values) that are required
+            to fully specify the scattering function.
+
+        Returns
+        -------
+        array_like(float)
+            Numerical value of the BRDF
+
+        """
+        brdffunc = self._lambda_func(*param_dict.keys())
+
+        return brdffunc(t_0, t_ex, p_0, p_ex, **param_dict)
+

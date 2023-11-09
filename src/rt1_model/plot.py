@@ -267,14 +267,14 @@ def hemreflect(
     ----------
     R : RT1-class object
         definition of the brdf-function to be evaluated
-        (either R or SRF  must be provided) The BRDf is defined via:
+        (either R or SRF  must be provided) The BRDF is defined via:
 
-            BRDF = R.SRF.NormBRDF * R.SRF.brdf()
+            BRDF = R.SRF.NormBRDF * R.SRF.calc()
     SRF : Surface-class object
           definition of the brdf-function to be evaluated
           (either R or SRF must be provided) The BRDf is defined via:
 
-              BRDF = SRF.NormBRDF * SRF.brdf()
+              BRDF = SRF.NormBRDF * SRF.calc()
 
     Other Parameters
     ----------------

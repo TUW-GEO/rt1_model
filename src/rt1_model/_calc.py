@@ -595,7 +595,7 @@ class RT1(object):
         I_bs = (
             self.I0
             * self._mu_0
-            * self.SRF.brdf(
+            * self.SRF.calc(
                 self.t_0,
                 self.t_ex,
                 self.p_0,
@@ -624,7 +624,7 @@ class RT1(object):
         vol = (
             (self.I0 * self.omega * self._mu_0 / (self._mu_0 + self._mu_ex))
             * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
-            * self.V.p(
+            * self.V.calc(
                 self.t_0,
                 self.t_ex,
                 self.p_0,
@@ -1221,7 +1221,7 @@ class RT1(object):
                 (1.0 / self._mu_0 + 1.0 / self._mu_ex ** (-1))
                 * np.exp(-self.tau / self._mu_0 - self.tau / self._mu_ex)
             )
-            * self.V.p(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+            * self.V.calc(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
         )
 
         return (1.0 - self.bsf) * dvdt
@@ -1239,7 +1239,7 @@ class RT1(object):
         dvdo = (
             (self.I0 * self._mu_0 / (self._mu_0 + self._mu_ex))
             * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
-            * self.V.p(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+            * self.V.calc(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
         )
 
         return (1.0 - self.bsf) * dvdo
@@ -1257,7 +1257,7 @@ class RT1(object):
         vol = (
             (self.I0 * self.omega * self._mu_0 / (self._mu_0 + self._mu_ex))
             * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
-            * self.V.p(
+            * self.V.calc(
                 self.t_0,
                 self.t_ex,
                 self.p_0,
@@ -1297,7 +1297,7 @@ class RT1(object):
             * (-1.0 / self._mu_0 - 1.0 / self._mu_ex)
             * np.exp(-self.tau / self._mu_0 - self.tau / self._mu_ex)
             * self._mu_0
-            * self.SRF.brdf(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
+            * self.SRF.calc(self.t_0, self.t_ex, self.p_0, self.p_ex, self.param_dict)
         )
 
         # Incorporate BRDF-normalization factor
@@ -1332,7 +1332,7 @@ class RT1(object):
         I_bs = (
             self.I0
             * self._mu_0
-            * self.SRF.brdf(
+            * self.SRF.calc(
                 self.t_0,
                 self.t_ex,
                 self.p_0,
@@ -1362,7 +1362,7 @@ class RT1(object):
         I_bs = (
             self.I0
             * self._mu_0
-            * self.SRF.brdf(
+            * self.SRF.calc(
                 self.t_0,
                 self.t_ex,
                 self.p_0,

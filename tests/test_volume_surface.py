@@ -65,7 +65,7 @@ class TestBasicPlotting(unittest.TestCase):
                     f"Parameter {key} incorrecty assigned for surface.{name}!",
                 )
 
-            SRF.brdf(0.1, 0.2, 0.3, 0.4)
+            SRF.calc(0.1, 0.2, 0.3, 0.4)
 
     def test_volume_init(self):
         a = [-0.5, 0.6, 0.4]
@@ -103,7 +103,8 @@ class TestBasicPlotting(unittest.TestCase):
                     f"Parameter {key} incorrecty assigned for volume.{name}!",
                 )
 
-            V.p(0.1, 0.2, 0.3, 0.4)
+            # evaluate function numerical
+            V.calc(0.1, 0.2, 0.3, 0.4)
 
 
 if __name__ == "__main__":

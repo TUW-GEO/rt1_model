@@ -77,35 +77,6 @@ class _Surface(_Scatter):
             d["SRF_name"] = self.name
         return d
 
-    def brdf(self, t_0, t_ex, p_0, p_ex, param_dict={}):
-        """
-        Calculate numerical value of the BRDF for chosen incidence- and exit angles.
-
-        Parameters
-        ----------
-        t_0 : array_like(float)
-              array of incident zenith-angles in radians
-
-        p_0 : array_like(float)
-              array of incident azimuth-angles in radians
-
-        t_ex : array_like(float)
-               array of exit zenith-angles in radians
-
-        p_ex : array_like(float)
-               array of exit azimuth-angles in radians
-
-        Returns
-        -------
-        array_like(float)
-                          Numerical value of the BRDF
-
-        """
-        brdffunc = self._lambda_func(*param_dict.keys())
-
-        return brdffunc(t_0, t_ex, p_0, p_ex, **param_dict)
-
-
 class LinCombSRF(_Surface):
     """
     Class to generate linear-combinations of volume-class elements.
