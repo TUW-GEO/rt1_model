@@ -79,7 +79,7 @@ class _Scatter(object):
         # obtained function
 
         # TODO maybe find a better check for this
-        #if self._func.is_constant():   # this is too slow!
+        # if self._func.is_constant():   # this is too slow!
         if len(self._func.free_symbols) == 0:
             pfunc = np.vectorize(pfunc)
 
@@ -155,6 +155,7 @@ class _Scatter(object):
 
         return brdffunc(t_0, t_ex, p_0, p_ex, **param_dict)
 
+
 class _LinComb(_Scatter):
     """
     Class to generate linear-combinations of scattering distribution functions.
@@ -169,6 +170,7 @@ class _LinComb(_Scatter):
         and the associated weighting-factors (floats) for the linear-combination.
 
     """
+
     name = "LinComb"
     _param_names = ["choices"]
 
@@ -184,7 +186,6 @@ class _LinComb(_Scatter):
         for c in self.choices:
             name += f"_({c[0]}, {c[1].name})"
         self.name = name
-
 
     @property
     @lru_cache()

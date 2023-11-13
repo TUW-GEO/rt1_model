@@ -5,6 +5,7 @@ from itertools import cycle
 import numpy as np
 import sympy as sp
 
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from matplotlib.collections import LineCollection
@@ -519,6 +520,7 @@ class Analyze:
         # buttonax.set_axis_off()
         self._buttonax.set_title("Select range", fontsize=10)
         params = ["None", *self._slider_params]
+
         self._radio = RadioButtons(
             self._buttonax,
             params,

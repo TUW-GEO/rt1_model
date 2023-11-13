@@ -21,7 +21,6 @@ Required dependencies
 Optional dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-
 To speed up symbolic calculations:
 
 - `python-symengine <https://github.com/symengine/symengine.py>`_ (recommended!)
@@ -30,6 +29,11 @@ For plotting:
 
 - `matplotlib <https://matplotlib.org/>`_
 
+To run unittests:
+
+- `pytest <https://docs.pytest.org/>`_
+- `pytest-cov <https://github.com/pytest-dev/pytest-cov>`_
+- `nbformat <https://github.com/jupyter/nbformat>`_
 
 To build the docs
 ~~~~~~~~~~~~~~~~~
