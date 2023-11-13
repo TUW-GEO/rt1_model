@@ -308,7 +308,7 @@ def hemreflect(
 
     # choose BRDF function to be evaluated
     if R is not None:
-        BRDF = R.SRF.brdf
+        BRDF = R.SRF.calc
 
         try:
             Nsymb = R.NormBRDF.free_symbols
@@ -317,13 +317,8 @@ def hemreflect(
         except Exception:
             NormBRDF = R.NormBRDF
     elif SRF is not None:
-        BRDF = SRF.brdf
-        try:
-            Nsymb = SRF.NormBRDF[0].free_symbols
-            Nfunc = sp.lambdify(Nsymb, SRF.NormBRDF, modules=["numpy"])
-            NormBRDF = Nfunc(*[param_dict[str(i)] for i in Nsymb])
-        except Exception:
-            NormBRDF = SRF.NormBRDF
+        BRDF = SRF.calc
+        NormBRDF = param_dict.get("NormBRDF", 1)
     else:
         assert False, "Error: You must provide either R or SRF"
 
