@@ -1,7 +1,6 @@
 import unittest
-import inspect
 
-from rt1_model import surface, volume, RT1
+from rt1_model import surface, volume
 
 
 class TestBasicPlotting(unittest.TestCase):
