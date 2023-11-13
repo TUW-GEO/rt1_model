@@ -1,12 +1,16 @@
 name: rt1
 channels:
   - conda-forge
+  - symengine
 
 dependencies:
   - numpy
   - sympy
   - scipy
-  - python-symengine
-  - matplotlib
+  - matplotlib >=3.8
   - pytest
   - pytest-cov
+  - nbformat
+  - pip
+  - pip:
+    - symengine

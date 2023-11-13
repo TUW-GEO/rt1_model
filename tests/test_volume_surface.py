@@ -66,7 +66,7 @@ class TestBasicPlotting(unittest.TestCase):
                 )
 
             SRF.calc(0.1, 0.2, 0.3, 0.4)
-            SRF.legexpansion(.1,.2,.3,.4)
+            SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
             SRF._func
             SRF.init_dict
 
@@ -108,10 +108,9 @@ class TestBasicPlotting(unittest.TestCase):
 
             # evaluate function numerical
             V.calc(0.1, 0.2, 0.3, 0.4)
-            V.legexpansion(.1,.2,.3,.4)
+            V.legexpansion(0.1, 0.2, 0.3, 0.4)
             V._func
             V.init_dict
-
 
     def test_linear_combinations_SRF(self):
         a = [0.1, 0.2, 0.3]
@@ -123,12 +122,15 @@ class TestBasicPlotting(unittest.TestCase):
             HG_nadirnorm=dict(t=0.4, ncoefs=10, a=a),
         )
 
-        choices = [(1/len(choices), getattr(surface, name)(**kwargs)) for name, kwargs in choices.items()]
+        choices = [
+            (1 / len(choices), getattr(surface, name)(**kwargs))
+            for name, kwargs in choices.items()
+        ]
 
         SRF = surface.LinComb(choices)
 
-        SRF.calc(.1,.2,.3,.4)
-        SRF.legexpansion(.1,.2,.3,.4)
+        SRF.calc(0.1, 0.2, 0.3, 0.4)
+        SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
         SRF._func
         SRF.init_dict
 
@@ -142,14 +144,18 @@ class TestBasicPlotting(unittest.TestCase):
             HGRayleigh=dict(t=0.3, ncoefs=10, a=a),
         )
 
-        choices = [(1/len(choices), getattr(volume, name)(**kwargs)) for name, kwargs in choices.items()]
+        choices = [
+            (1 / len(choices), getattr(volume, name)(**kwargs))
+            for name, kwargs in choices.items()
+        ]
 
         V = volume.LinComb(choices)
 
-        V.calc(.1,.2,.3,.4)
-        V.legexpansion(.1,.2,.3,.4)
+        V.calc(0.1, 0.2, 0.3, 0.4)
+        V.legexpansion(0.1, 0.2, 0.3, 0.4)
         V._func
         V.init_dict
+
 
 if __name__ == "__main__":
     unittest.main()
