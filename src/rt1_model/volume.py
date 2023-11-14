@@ -43,39 +43,6 @@ class _Volume(_Scatter):
         except Exception:
             return object.__repr__(self)
 
-    @property
-    def init_dict(self):
-        """Get a dict that can be used to initialize the BRDF."""
-        if self.name.startswith("LinComb"):
-            d = dict()
-            for key in self._param_names:
-                val = self.__dict__[key]
-                if isinstance(val, sp.Basic):
-                    d[key] = str(val)
-                else:
-                    d[key] = val
-            d["V_name"] = "LinComb"
-            srfchoices = []
-            for frac, srf in d["choices"]:
-                if isinstance(frac, sp.Basic):
-                    srfchoices.append([str(frac), srf.init_dict])
-                else:
-                    srfchoices.append([frac, srf.init_dict])
-
-            d["choices"] = srfchoices
-        else:
-            d = dict()
-            for key in self._param_names:
-                val = self.__dict__[key]
-                if isinstance(val, sp.Basic):
-                    d[key] = str(val)
-                else:
-                    d[key] = val
-            d["V_name"] = self.name
-        return d
-
-
-class LinComb(_LinComb, _Volume):
     name = "LinComb"
 
     def __init__(self, *args, **kwargs):
