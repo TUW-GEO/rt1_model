@@ -15,36 +15,17 @@ class _Volume(_Scatter):
     _param_names = ["a"]
 
     def __init__(self, **kwargs):
+        # register plot-functions
+        self._register_plotfuncs()
+
         # set scattering angle generalization-matrix to [-1,1,1] if it is not
         # explicitly provided by the chosen class this results in a peak in
         # forward-direction which is suitable for describing volume-scattering
         # phase-functions
         self.a = getattr(self, "a", [-1.0, 1.0, 1.0])
 
-        try:
-            from .plot import polarplot
 
-            # add a quick way for visualizing the functions as polarplot
-            self.polarplot = partial(polarplot, X=self)
-            update_wrapper(self.polarplot, polarplot)
-        except ImportError:
-            pass
-
-    def __repr__(self):
-        try:
-            return (
-                self.name
-                + "("
-                + (",\n" + " " * (len(self.name) + 1)).join(
-                    [f"{param}={getattr(self, param)}" for param in self._param_names]
-                )
-                + ")"
-            )
-        except Exception:
-            return object.__repr__(self)
-
-    name = "LinComb"
-
+class LinComb(_LinComb, _Volume):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

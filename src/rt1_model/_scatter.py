@@ -1,13 +1,27 @@
 """General object for scattering distribution functions."""
 
-from functools import lru_cache, wraps
+from functools import lru_cache, wraps, partial, update_wrapper
 
 import sympy as sp
 import numpy as np
+from . import _log
 
 
 class _Scatter:
     """The base object for any Surface and Volume objects."""
+
+    def __repr__(self):
+        try:
+            return (
+                self.name
+                + "("
+                + (",\n" + " " * (len(self.name) + 1)).join(
+                    [f"{param}={getattr(self, param)}" for param in self._param_names]
+                )
+                + ")"
+            )
+        except Exception:
+            return object.__repr__(self)
 
     def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
@@ -155,6 +169,26 @@ class _Scatter:
 
         return func(t_0, t_ex, p_0, p_ex, **param_dict)
 
+    def _register_plotfuncs(self):
+        # register quick-plot functions for distribution functions
+
+        try:
+            from .plot import polarplot, hemreflect
+            from .surface import _Surface
+
+            # quick way for visualizing the functions as polarplot
+            self.polarplot = partial(polarplot, X=self)
+            update_wrapper(self.polarplot, polarplot)
+
+            if isinstance(self, _Surface):
+                # quick way for visualizing the associated hemispherical reflectance
+                self.hemreflect = partial(hemreflect, SRF=self)
+                update_wrapper(self.hemreflect, hemreflect)
+        except ImportError:
+            _log.debug("Unable to register plotting functions.", exc_info=True)
+            pass
+
+
 class _LinComb(_Scatter):
     """
     Class to generate linear-combinations of scattering distribution functions.
@@ -209,14 +243,12 @@ class _LinComb(_Scatter):
         # {a1 : [(w1, f1), (w2, f2), ...], a2 : [(w3, f3), (w4, f4), ...]}
         self._a_groups = dict()
         for frac, func in zip(self._weights, self._objs):
-            self._a_groups.setdefault(
-                tuple(func.a), []).append((frac, func))
+            self._a_groups.setdefault(tuple(func.a), []).append((frac, func))
 
         # set combined name
-        self.name = (
-            "LinComb_" +
-            "_".join(f"({w}, {o.name})" for (w, o) in zip(self._weights, self._objs))
-            )
+        self.name = "LinComb_" + "_".join(
+            f"({w}, {o.name})" for (w, o) in zip(self._weights, self._objs)
+        )
 
     @property
     @lru_cache()
@@ -241,7 +273,7 @@ class _LinComb(_Scatter):
         raise NotImplementedError(
             "Legendre coefficients of linear combinations are not defined. "
             "Use `.legexpansion(...)` to get the combined Legendre expansion!"
-            )
+        )
 
     @wraps(_Scatter.legexpansion)
     def legexpansion(self, t_0, t_ex, p_0, p_ex):
@@ -256,8 +288,7 @@ class _LinComb(_Scatter):
             legcoefs = sum(frac * func.legcoefs for frac, func in choices)
 
             exp += sp.Sum(
-                legcoefs
-                * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
+                legcoefs * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
                 (n, 0, ncoefs - 1),
             )
 

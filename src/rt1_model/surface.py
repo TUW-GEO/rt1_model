@@ -15,41 +15,17 @@ class _Surface(_Scatter):
     _param_names = ["a"]
 
     def __init__(self, **kwargs):
+        # register plot-functions
+        self._register_plotfuncs()
+
         # set scattering angle generalization-matrix to [1,1,1] if it is not
         # explicitly provided by the chosen class.
         # this results in a peak in specular-direction which is suitable
         # for describing surface BRDF's
         self.a = getattr(self, "a", [1.0, 1.0, 1.0])
 
-        try:
-            from .plot import polarplot, hemreflect
-
-            # quick way for visualizing the functions as polarplot
-            self.polarplot = partial(polarplot, X=self)
-            update_wrapper(self.polarplot, polarplot)
-            # quick way for visualizing the associated hemispherical reflectance
-            self.hemreflect = partial(hemreflect, SRF=self)
-            update_wrapper(self.hemreflect, hemreflect)
-        except ImportError:
-            pass
-
-    def __repr__(self):
-        try:
-            return (
-                self.name
-                + "("
-                + (",\n" + " " * (len(self.name) + 1)).join(
-                    [f"{param}={getattr(self, param)}" for param in self._param_names]
-                )
-                + ")"
-            )
-        except Exception:
-            return object.__repr__(self)
 
 class LinComb(_LinComb, _Surface):
-    # docstring hinherited
-    name = "LinComb"
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
