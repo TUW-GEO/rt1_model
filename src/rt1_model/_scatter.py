@@ -1,12 +1,12 @@
 """General object for scattering distribution functions."""
 
-from functools import lru_cache
+from functools import lru_cache, wraps
 
 import sympy as sp
 import numpy as np
 
 
-class _Scatter(object):
+class _Scatter:
     """The base object for any Surface and Volume objects."""
 
     def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
@@ -151,10 +151,9 @@ class _Scatter(object):
             Numerical value of the BRDF
 
         """
-        brdffunc = self._lambda_func(*param_dict.keys())
+        func = self._lambda_func(*param_dict.keys())
 
-        return brdffunc(t_0, t_ex, p_0, p_ex, **param_dict)
-
+        return func(t_0, t_ex, p_0, p_ex, **param_dict)
 
 class _LinComb(_Scatter):
     """
@@ -165,9 +164,32 @@ class _LinComb(_Scatter):
 
     Parameters
     ----------
-    choices : [ [float, ScatterObject] , [float, ScatterObject] ,  ...]
+    choices : [ (float, ScatterObject) , (float, ScatterObject) ,  ...]
         A list that contains the the individual scattering functions
-        and the associated weighting-factors (floats) for the linear-combination.
+        and the associated weighting-factors for the linear-combination.
+
+        The weights can be either numerical values or strings
+        (which will be parsed as sympy expressions)
+
+    Examples
+    --------
+
+    Defining linear-combinations of volume- or surface scattering distributions
+    works completely similar:
+
+    >>> from rt1_model import volume
+    >>> V = volume.LinComb([(0.5, volume.Isotropic()), (0.5, volume.Rayleigh())])
+
+    >>> from rt1_model import surface
+    >>> V = surface.LinComb([(0.5, surface.Isotropic()),
+                             (0.5, surface.HenyeyGreenstein(t="t", ncoefs=10))])
+
+    You can also use expressions for the weights!
+
+    >>> from rt1_model import surface
+    >>> V = surface.LinComb([("x", surface.Isotropic()),
+                             ("1 - x", surface.HenyeyGreenstein(t="t", ncoefs=10))])
+
 
     """
 
@@ -176,104 +198,67 @@ class _LinComb(_Scatter):
 
     def __init__(self, choices=None, **kwargs):
         super().__init__(**kwargs)
-        # cast fractions passed as strings to sympy symbols
-        self.choices = [(self._parse_sympy_param(i), j) for i, j in choices]
 
-        self._comb = self._combine()
-        self._set_legexpansion()
+        self._weights, self._objs = [], []
+        for w, o in choices:
+            # cast weights passed as strings to sympy symbols
+            self._weights.append(self._parse_sympy_param(w))
+            self._objs.append(o)
 
-        name = "LinComb"
-        for c in self.choices:
-            name += f"_({c[0]}, {c[1].name})"
-        self.name = name
+        # group weights and functions with respect to the "a" parameter
+        # {a1 : [(w1, f1), (w2, f2), ...], a2 : [(w3, f3), (w4, f4), ...]}
+        self._a_groups = dict()
+        for frac, func in zip(self._weights, self._objs):
+            self._a_groups.setdefault(
+                tuple(func.a), []).append((frac, func))
+
+        # set combined name
+        self.name = (
+            "LinComb_" +
+            "_".join(f"({w}, {o.name})" for (w, o) in zip(self._weights, self._objs))
+            )
 
     @property
     @lru_cache()
     def _func(self):
         """Phase function as sympy object for later evaluation."""
-        return self._comb._func
+        _func = 0
+        for c, o in zip(self._weights, self._objs):
+            _func += c * o._func
 
-    def _set_legexpansion(self):
-        """Set legexpansion to the combined legexpansion."""
-        self.ncoefs = self._comb.ncoefs
-        self.legexpansion = self._comb.legexpansion
+        return _func
 
-    def _combine(self):
-        """
-        Get a combined Surface object based on an input-array of Surface objects.
+    @property
+    @lru_cache()
+    def ncoefs(self):
+        # set ncoefs of the combined scattering function to the maximum
+        # number of coefficients within the chosen functions.
+        # (this is necessary for correct evaluation of fn-coefficients)
+        return max([o.ncoefs for o in self._objs])
 
-        The array must be shaped in the form:
-            choices = [  [ weighting-factor   ,   Surface-class element ],
-                            [ weighting-factor   ,   Surface-class element ],
-                        ...]
+    @property
+    def legcoefs(self):
+        raise NotImplementedError(
+            "Legendre coefficients of linear combinations are not defined. "
+            "Use `.legexpansion(...)` to get the combined Legendre expansion!"
+            )
 
-        ATTENTION: the .legexpansion()-function of the combined surface-class
-        element is no longer related to its legcoefs (which are set to 0.)
-                   since the individual legexpansions of the combined surface-
-                   class elements are possibly evaluated with a different
-                   a-parameter of the generalized scattering angle! This does
-                   not affect any calculations, since the evaluation is
-                   only based on the use of the .legexpansion()-function.
-        """
+    @wraps(_Scatter.legexpansion)
+    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+        # evaluate the combined legendre expansion
+        n = sp.Symbol("n")
 
-        class _Dummy(_Scatter):
-            """Dummy-class used to generate linear-combinations of BRDFs."""
+        exp = 0
+        for a, choices in self._a_groups.items():
+            # get max. ncoefs for each a-parameter group
+            ncoefs = max(i[1].ncoefs for i in choices)
+            # sum up legendre coefficients
+            legcoefs = sum(frac * func.legcoefs for frac, func in choices)
 
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
+            exp += sp.Sum(
+                legcoefs
+                * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
+                (n, 0, ncoefs - 1),
+            )
 
-                self._func = 0.0
-                self.legcoefs = 0.0
-
-        # initialize a combined phase-function class element
-        comb = _Dummy()
-        # set ncoefs of the combined volume-class element to the maximum
-        comb.ncoefs = max([i[1].ncoefs for i in self.choices])
-        #   number of coefficients within the chosen functions.
-        #   (this is necessary for correct evaluation of fn-coefficients)
-
-        # find BRDF functions with equal a parameters
-        equals = [
-            np.where(
-                (np.array([cc[1].a for cc in self.choices]) == tuple(c[1].a)).all(
-                    axis=1
-                )
-            )[0]
-            for c in self.choices
-        ]
-
-        # evaluate index of functions that have equal a parameter
-
-        # find phase functions where a-parameter is equal
-        equal_a = list({tuple(row) for row in equals})
-
-        # evaluation of combined expansion in legendre-polynomials
-        dummylegexpansion = []
-        for i in range(0, len(equal_a)):
-            dummy = _Dummy()
-            # select SRF choices where a parameter is equal
-            equals = np.take(self.choices, equal_a[i], axis=0)
-            # set ncoefs to the maximum number within the choices
-            # with equal a-parameter
-            dummy.ncoefs = max([SRF[1].ncoefs for SRF in equals])
-            # loop over phase-functions with equal a-parameter
-            for eq in equals:
-                # set parameters based on chosen phase-functions and evaluate
-                # combined legendre-expansion
-                dummy.a = eq[1].a
-                dummy._func = dummy._func + eq[1]._func * eq[0]
-                dummy.legcoefs += eq[1].legcoefs * eq[0]
-
-            dummylegexpansion = dummylegexpansion + [dummy.legexpansion]
-
-        # combine legendre-expansions for each a-parameter based on given
-        # combined legendre-coefficients
-        comb.legexpansion = lambda t_0, t_ex, p_0, p_ex: np.sum(
-            [lexp(t_0, t_ex, p_0, p_ex) for lexp in dummylegexpansion]
-        )
-
-        for c in self.choices:
-            # set parameters based on chosen classes to define analytic
-            # function representation
-            comb._func = comb._func + c[1]._func * c[0]
-        return comb
+        return exp
