@@ -44,7 +44,7 @@ class RT1(object):
 
     Parameters
     ----------
-    I0 : scalar(float)
+    I0 : float
          Incident intensity. (Only relevant if sig0 = False)
 
     t_0 : array_like(float)
@@ -1012,7 +1012,7 @@ class RT1(object):
 
         Parameters
         ----------
-        i : scalar(int)
+        i : int
             Power of the cosine function to be integrated, i.e.  cos(x)^i
 
         Returns

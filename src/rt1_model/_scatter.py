@@ -10,19 +10,6 @@ from . import _log
 class _Scatter:
     """The base object for any Surface and Volume objects."""
 
-    def __repr__(self):
-        try:
-            return (
-                self.name
-                + "("
-                + (",\n" + " " * (len(self.name) + 1)).join(
-                    [f"{param}={getattr(self, param)}" for param in self._param_names]
-                )
-                + ")"
-            )
-        except Exception:
-            return object.__repr__(self)
-
     def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
         Generalized scattering angle with respect to the given zenith-angles.
@@ -227,12 +214,7 @@ class _LinComb(_Scatter):
 
     """
 
-    name = "LinComb"
-    _param_names = ["choices"]
-
     def __init__(self, choices=None, **kwargs):
-        super().__init__(**kwargs)
-
         self._weights, self._objs = [], []
         for w, o in choices:
             # cast weights passed as strings to sympy symbols
@@ -245,13 +227,10 @@ class _LinComb(_Scatter):
         for frac, func in zip(self._weights, self._objs):
             self._a_groups.setdefault(tuple(func.a), []).append((frac, func))
 
-        # set combined name
-        self.name = "LinComb_" + "_".join(
-            f"({w}, {o.name})" for (w, o) in zip(self._weights, self._objs)
-        )
+        # this must be done at the end so that _objs and _weights are properly defined!
+        super().__init__(**kwargs)
 
     @property
-    @lru_cache()
     def _func(self):
         """Phase function as sympy object for later evaluation."""
         _func = 0
@@ -261,7 +240,6 @@ class _LinComb(_Scatter):
         return _func
 
     @property
-    @lru_cache()
     def ncoefs(self):
         # set ncoefs of the combined scattering function to the maximum
         # number of coefficients within the chosen functions.
