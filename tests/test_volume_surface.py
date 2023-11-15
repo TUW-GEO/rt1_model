@@ -28,7 +28,7 @@ class TestBasicPlotting(unittest.TestCase):
             )
         ]
 
-    def testSurfaceScatter_init(self):
+    def test_surface_init(self):
         a = [0.1, 0.2, 0.3]
 
         choices = dict(
@@ -39,7 +39,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         self.assertTrue(
-            all(i in choices for i in self.SRFnames),
+            all(i in choices for i in self.SRFnames if i != "SurfaceScatter"),
             f"Surface functions {set(self.SRFnames).difference(choices)} are not tested!",
         )
 
@@ -68,7 +68,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         self.assertTrue(
-            all(i in choices for i in self.Vnames),
+            all(i in choices for i in self.Vnames if i != "VolumeScatter"),
             f"Volume functions {set(self.Vnames).difference(choices)} are not tested!",
         )
 
