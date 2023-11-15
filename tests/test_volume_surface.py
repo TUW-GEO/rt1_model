@@ -11,7 +11,7 @@ class TestBasicPlotting(unittest.TestCase):
             for key, val in surface.__dict__.items()
             if (
                 isinstance(val, type)
-                and issubclass(val, surface._Surface)
+                and issubclass(val, surface.SurfaceScatter)
                 and not key.startswith("_")
                 and not key in ["LinComb"]
             )
@@ -22,7 +22,7 @@ class TestBasicPlotting(unittest.TestCase):
             for key, val in volume.__dict__.items()
             if (
                 isinstance(val, type)
-                and issubclass(val, volume._Volume)
+                and issubclass(val, volume.VolumeScatter)
                 and not key.startswith("_")
                 and not key in ["LinComb"]
             )
@@ -39,24 +39,13 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         self.assertTrue(
-            all(i in choices for i in self.SRFnames),
+            all(i in choices for i in self.SRFnames if i != "SurfaceScatter"),
             f"Surface functions {set(self.SRFnames).difference(choices)} are not tested!",
         )
 
         # Check SRF initialization
         for name, params in choices.items():
             SRF = getattr(surface, name)(**params)
-
-            init_dict = {**choices[name], "SRF_name": name, "a": a}
-            self.assertTrue(
-                all(
-                    (key in init_dict and init_dict.get(key, "nope") == val)
-                    for key, val in SRF.init_dict.items()
-                ),
-                f"Missing or incorrect values found in surface.{name} init_dict!\n"
-                f"expected: {init_dict}\n"
-                f"got:      {SRF.init_dict}",
-            )
 
             for key, val in params.items():
                 self.assertTrue(
@@ -67,7 +56,6 @@ class TestBasicPlotting(unittest.TestCase):
             SRF.calc(0.1, 0.2, 0.3, 0.4)
             SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
             SRF._func
-            SRF.init_dict
 
     def test_volume_init(self):
         a = [-0.5, 0.6, 0.4]
@@ -80,24 +68,13 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         self.assertTrue(
-            all(i in choices for i in self.Vnames),
+            all(i in choices for i in self.Vnames if i != "VolumeScatter"),
             f"Volume functions {set(self.Vnames).difference(choices)} are not tested!",
         )
 
         # Check SRF initialization
         for name, params in choices.items():
             V = getattr(volume, name)(**params)
-
-            init_dict = {**choices[name], "V_name": name, "a": a}
-            self.assertTrue(
-                all(
-                    (key in init_dict and init_dict.get(key, "nope") == val)
-                    for key, val in V.init_dict.items()
-                ),
-                f"Missing or incorrect values found in volume.{name} init_dict!\n"
-                f"expected: {init_dict}\n"
-                f"got:      {V.init_dict}",
-            )
 
             for key, val in params.items():
                 self.assertTrue(
@@ -109,7 +86,6 @@ class TestBasicPlotting(unittest.TestCase):
             V.calc(0.1, 0.2, 0.3, 0.4)
             V.legexpansion(0.1, 0.2, 0.3, 0.4)
             V._func
-            V.init_dict
 
     def test_linear_combinations_SRF(self):
         a = [0.1, 0.2, 0.3]
@@ -131,7 +107,6 @@ class TestBasicPlotting(unittest.TestCase):
         SRF.calc(0.1, 0.2, 0.3, 0.4)
         SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
         SRF._func
-        SRF.init_dict
 
     def test_linear_combinations_V(self):
         a = [0.1, 0.2, 0.3]
@@ -153,7 +128,6 @@ class TestBasicPlotting(unittest.TestCase):
         V.calc(0.1, 0.2, 0.3, 0.4)
         V.legexpansion(0.1, 0.2, 0.3, 0.4)
         V._func
-        V.init_dict
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import cloudpickle
 
 from rt1_model import RT1, surface, volume
 
@@ -14,7 +15,7 @@ class TestRT1(unittest.TestCase):
             geometry="mono",
         )
 
-        self.V = volume.Rayleigh(tau=np.array([0.7]), omega=np.array([0.3]))
+        self.V = volume.Rayleigh()
         self.S = surface.Isotropic()
 
     def test_init(self):
@@ -83,3 +84,20 @@ class TestRT1(unittest.TestCase):
         self.assertEqual(Iint, 0.0)
         self.assertEqual(Itot, Isurf)
         self.assertTrue(Isurf > 0.0)
+
+    def test_pickle(self):
+        SRF = surface.HenyeyGreenstein(t="t_s", ncoefs=8)
+        V = volume.HGRayleigh(t="t_v", ncoefs=8)
+
+        R = RT1(V=V, SRF=SRF)
+        R.set_geometry(t_0=0.1, p_0=0.2, geometry="mono")
+        R.calc(omega=0.3, tau=0.1, NormBRDF=0.3, t_s=0.3, t_v=0.4)
+
+        dump = cloudpickle.dumps(R)
+
+        load = cloudpickle.loads(dump)
+        self.assertTrue(np.allclose(load.calc(), R.calc()))
+
+
+if __name__ == "__main__":
+    unittest.main()

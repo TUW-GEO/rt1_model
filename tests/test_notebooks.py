@@ -25,7 +25,7 @@ class TestExampleNotebooks:
                     if not l.startswith("%"):
                         # test both sympy and symengine backend
                         if "RT1(" in l:
-                            l.replace("RT1(", f"RT1(backend={backend}, ")
+                            l = l.replace("RT1(", f"RT1(lambda_backend='{backend}', ")
 
                         code += f"{l}\n"
 
@@ -42,7 +42,7 @@ class TestExampleNotebooks:
 
                     assert (
                         np.mean(diff) < 0.15
-                    ), f"Fit results of parameter {key} are not within limits!"
+                    ), "Fit results of parameter {key} are not within limits!"
 
 
 if __name__ == "__main__":

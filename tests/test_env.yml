@@ -11,6 +11,8 @@ dependencies:
   - pytest
   - pytest-cov
   - nbformat
+  - numpydoc
+  - cloudpickle
   - pip
   - pip:
     - symengine

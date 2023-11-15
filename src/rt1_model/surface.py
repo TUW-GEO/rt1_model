@@ -1,167 +1,119 @@
 """Definition of surface scattering functions (BRDF)."""
 
-from functools import partial, update_wrapper, lru_cache
-
-import numpy as np
 import sympy as sp
 
 from ._scatter import _Scatter, _LinComb
+from .helpers import append_numpy_docstring
 
 
-class _Surface(_Scatter):
-    """Base class for surface scattering functions."""
+class SurfaceScatter(_Scatter):
+    """
+    Class for use as surface scattering distribution.
 
-    name = "RT1_Surface_base_class"
-    _param_names = ["a"]
+    Parameters
+    ----------
+    ncoefs : int
+             Number of coefficients used for the Legendre-approximation.
 
-    def __init__(self, **kwargs):
+    a : [ float , float , float ] , optional (default = [1.,1.,1.])
+        Generalized scattering angle parameters used for defining the
+        scat_angle() of the distribution function. For more details, see:
+        https://rt1-model.rtfd.io/en/latest/theory.html#equation-general_scat_angle
+
+    """
+
+    def __init__(self, ncoefs=None, a=None):
+        # register plot-functions
+        self._register_plotfuncs()
+
         # set scattering angle generalization-matrix to [1,1,1] if it is not
         # explicitly provided by the chosen class.
         # this results in a peak in specular-direction which is suitable
         # for describing surface BRDF's
-        self.a = getattr(self, "a", [1.0, 1.0, 1.0])
+        if a is None:
+            a = getattr(self, "a", [1.0, 1.0, 1.0])
 
-        try:
-            from .plot import polarplot, hemreflect
+        self.a = [self._parse_sympy_param(i) for i in a]
+        self._ncoefs = ncoefs
 
-            # quick way for visualizing the functions as polarplot
-            self.polarplot = partial(polarplot, X=self)
-            update_wrapper(self.polarplot, polarplot)
-            # quick way for visualizing the associated hemispherical reflectance
-            self.hemreflect = partial(hemreflect, SRF=self)
-            update_wrapper(self.hemreflect, hemreflect)
-        except ImportError:
-            pass
-
-    def __repr__(self):
-        try:
-            return (
-                self.name
-                + "("
-                + (",\n" + " " * (len(self.name) + 1)).join(
-                    [f"{param}={getattr(self, param)}" for param in self._param_names]
-                )
-                + ")"
-            )
-        except Exception:
-            return object.__repr__(self)
+        assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
+        assert self.ncoefs is not None, "Number of coefficients must be provided!"
+        assert self.ncoefs > 0, "Number of coeficients must be larger than 0!"
 
     @property
-    def init_dict(self):
-        """Get a dict that can be used to initialize the BRDF."""
-        if self.name.startswith("LinComb"):
-            d = dict()
-            for key in self._param_names:
-                val = self.__dict__[key]
-                if isinstance(val, sp.Basic):
-                    d[key] = str(val)
-                else:
-                    d[key] = val
-            d["SRF_name"] = "LinComb"
-            srfchoices = []
-            for frac, srf in d["choices"]:
-                if isinstance(frac, sp.Basic):
-                    srfchoices.append([str(frac), srf.init_dict])
-                else:
-                    srfchoices.append([frac, srf.init_dict])
+    def ncoefs(self):
+        """The number of coefficients used in the legendre expansion."""
+        return self._ncoefs
 
-            d["choices"] = srfchoices
-        else:
-            d = dict()
-            for key in self._param_names:
-                val = self.__dict__[key]
-                if isinstance(val, sp.Basic):
-                    d[key] = str(val)
-                else:
-                    d[key] = val
-            d["SRF_name"] = self.name
-        return d
+    def legcoefs(self):
+        """Legendre coefficients of the BRDF."""
+        raise NotImplementedError
+
+    def _func(self):
+        """Phase function as sympy object."""
+        raise NotImplementedError
 
 
-class LinComb(_LinComb, _Surface):
-    # docstring hinherited
-    name = "LinComb"
-
+class LinComb(_LinComb, SurfaceScatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-class Isotropic(_Surface):
-    """Define an isotropic surface brdf."""
+@append_numpy_docstring(SurfaceScatter)
+class Isotropic(SurfaceScatter):
+    """
+    Isotropic (Lambertian) surface brdf.
 
-    name = "Isotropic"
-    _param_names = []
+    Notes
+    -----
+    - Only 1 expansion coefficient is required, so `ncoefs` is always set to 1!
+    - Since the distribution is independent of the scattering angle, the `a` parameter
+      has no effect!
+
+    """
 
     def __init__(self, **kwargs):
         super(Isotropic, self).__init__(**kwargs)
 
     @property
     def ncoefs(self):
-        """The number of coefficients used to approximate the BRDF."""
-        # make ncoefs a property since it is fixed and should not be changed
-        # only 1 coefficient is needed to correctly represent
-        # the Isotropic scattering function
+        """The number of coefficients used in the legendre expansion."""
+        # Only 1 coefficient is needed to correctly represent the scattering function
         return 1
 
     @property
-    @lru_cache()
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return (1.0 / sp.pi) * sp.KroneckerDelta(0, n)
 
     @property
-    @lru_cache()
     def _func(self):
-        """Phase function as sympy object for later evaluation."""
+        """Phase function as sympy object."""
         return 1.0 / sp.pi
 
 
-class CosineLobe(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class CosineLobe(SurfaceScatter):
     """
-    Define a (possibly generalized) cosine-lobe of power i.
+    Cosine-lobe of power i.
 
     Parameters
     ----------
-    i : scalar(int)
+    i : int
         Power of the cosine lobe, i.e. cos(x)^i
-
-    ncoefs : scalar(int)
-             Number of coefficients used within the Legendre-approximation
-
-    a : [ float , float , float ] , optional (default = [1.,1.,1.])
-        generalized scattering angle parameters used for defining the
-        scat_angle() of the BRDF
-        (http://rt1.readthedocs.io/en/latest/theory.html#equation-general_scat_angle)
     """
 
-    name = "CosineLobe"
-    _param_names = ["i", "ncoefs", "a"]
+    def __init__(self, i=None, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, ncoefs=None, i=None, a=[1.0, 1.0, 1.0], **kwargs):
-        assert ncoefs is not None, (
-            "Error: number of coefficients " + "needs to be provided!"
-        )
-        assert i is not None, "Error: Cosine lobe power needs to be specified!"
-        super(CosineLobe, self).__init__(**kwargs)
-        assert ncoefs > 0
+        assert i is not None, "Cosine lobe power must be specified!"
+        assert isinstance(i, int), "Cosine lobe power must be an integer!"
+        assert i >= 0, "Power of Cosine-Lobe must be greater than 0!"
+
         self.i = i
-        assert isinstance(self.i, int), (
-            "Error: Cosine lobe power needs " + "to be an integer!"
-        )
-        assert i >= 0, "ERROR: Power of Cosine-Lobe needs to be greater than 0"
-        assert isinstance(a, list), (
-            "Error: Generalization-parameter " + "needs to be a list"
-        )
-        assert len(a) == 3, (
-            "Error: Generalization-parameter list must " + "contain 3 values"
-        )
-
-        self.a = [self._parse_sympy_param(i) for i in a]
-        self.ncoefs = int(ncoefs)
 
     @property
-    @lru_cache()
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
@@ -184,9 +136,8 @@ class CosineLobe(_Surface):
         )
 
     @property
-    @lru_cache()
     def _func(self):
-        """Phase function as sympy object for later evaluation."""
+        """Phase function as sympy object."""
         theta_0 = sp.Symbol("theta_0")
         theta_ex = sp.Symbol("theta_ex")
         phi_0 = sp.Symbol("phi_0")
@@ -205,49 +156,31 @@ class CosineLobe(_Surface):
         return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
 
 
-class HenyeyGreenstein(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class HenyeyGreenstein(SurfaceScatter):
     """
-    HenyeyGreenstein scattering function for use as BRDF.
+    HenyeyGreenstein scattering function.
+
+        Henyey, L. G. and Greenstein, J. L., Diffuse radiation in the Galaxy.,
+        The Astrophysical Journal, vol. 93, pp. 70–83, 1941. doi:10.1086/144246.
 
     Parameters
     ----------
-    t : scalar(float)
-        Asymmetry parameter of the Henyey-Greenstein function
+    t : float
+        Asymmetry parameter (must be in the range -1 < t < 1).
 
-    ncoefs : scalar(int)
-             Number of coefficients used within the Legendre-approximation
-
-    a : [ float , float , float ] , optional (default = [1.,1.,1.])
-        generalized scattering angle parameters used for defining the
-        scat_angle() of the BRDF
-        (http://rt1.readthedocs.io/en/latest/theory.html#equation-general_scat_angle)
     """
 
-    name = "HenyeyGreenstein"
-    _param_names = ["t", "ncoefs", "a"]
+    def __init__(self, t=None, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, t=None, ncoefs=None, a=[1.0, 1.0, 1.0], **kwargs):
-        assert t is not None, "t parameter needs to be provided!"
-        assert ncoefs is not None, "Number of coeff. needs to be specified"
-        super(HenyeyGreenstein, self).__init__(**kwargs)
-
-        assert isinstance(a, list), (
-            "Error: Generalization-parameter " + "needs to be a list"
-        )
-        assert len(a) == 3, (
-            "Error: Generalization-parameter list must " + "contain 3 values"
-        )
+        assert t is not None, "The asymmetry parameter t needs to be provided!"
 
         self.t = self._parse_sympy_param(t)
-        self.a = [self._parse_sympy_param(i) for i in a]
-
-        self.ncoefs = ncoefs
-        assert self.ncoefs > 0
 
     @property
-    @lru_cache()
     def _func(self):
-        """Phase function as sympy object for later evaluation."""
+        """Phase function as sympy object."""
         theta_0 = sp.Symbol("theta_0")
         theta_ex = sp.Symbol("theta_ex")
         phi_0 = sp.Symbol("phi_0")
@@ -262,58 +195,38 @@ class HenyeyGreenstein(_Surface):
         )
 
     @property
-    @lru_cache()
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return 1.0 * (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
 
 
-class HG_nadirnorm(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class HG_nadirnorm(SurfaceScatter):
     """
     Nadir-normalized HenyeyGreenstein scattering function.
 
+        R.Quast, C.Albergel, J.C.Calvet, W.Wagner, A Generic First-Order Radiative
+        Transfer Modelling Approach for the Inversion of Soil and Vegetation Parameters
+        from Scatterometer Observations, Remote Sensing (2019), doi:10.3390/rs11030285
+
     Parameters
     ----------
-    t : scalar(float)
-        Asymmetry parameter of the Henyey-Greenstein function
+    t : float
+        Asymmetry parameter (must be in the range -1 < t < 1).
 
-    ncoefs : scalar(int)
-             Number of coefficients used within the Legendre-approximation
-
-    a : [ float , float , float ] , optional (default = [1.,1.,1.])
-        generalized scattering angle parameters used for defining the
-        scat_angle() of the BRDF
-        (http://rt1.readthedocs.io/en/latest/theory.html#equation-general_scat_angle)
     """
 
-    name = "HG_nadirnorm"
-    _param_names = ["t", "ncoefs", "a"]
+    def __init__(self, t=None, **kwargs):
+        super().__init__(**kwargs)
 
-    def __init__(self, t=None, ncoefs=None, a=[1.0, 1.0, 1.0], **kwargs):
-        assert t is not None, "t parameter needs to be provided!"
-        assert ncoefs is not None, "Number of coeffs needs to be specified"
-        super(HG_nadirnorm, self).__init__(**kwargs)
-
-        assert isinstance(a, list), (
-            "Error: Generalization-parameter " + "needs to be a list"
-        )
-        assert len(a) == 3, (
-            "Error: Generalization-parameter list must " + "contain 3 values"
-        )
+        assert t is not None, "The asymmetry parameter t needs to be provided!"
 
         self.t = self._parse_sympy_param(t)
-        self.a = [self._parse_sympy_param(i) for i in a]
-
-        self.ncoefs = ncoefs
-        assert self.ncoefs > 0
-
-        self._param_names = ["t", "ncoefs", "a"]
 
     @property
-    @lru_cache()
     def _func(self):
-        """Define phase function as sympy object for later evaluation."""
+        """Define Phase function as sympy object."""
         theta_0 = sp.Symbol("theta_0")
         theta_ex = sp.Symbol("theta_ex")
         phi_0 = sp.Symbol("phi_0")
@@ -346,7 +259,6 @@ class HG_nadirnorm(_Surface):
         return func
 
     @property
-    @lru_cache()
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
         nadir_hemreflect = 4 * (
