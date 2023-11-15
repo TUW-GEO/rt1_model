@@ -557,7 +557,7 @@ class Analyze:
         labels = ["Total", "Surface", "Volume", "Interaction"]
 
         if self.R.int_Q is True:
-            sv = self.R.SurfaceScatter_volume().squeeze()
+            sv = self.R._surface_volume().squeeze()
         else:
             sv = None
 
