@@ -25,7 +25,7 @@ class TestExampleNotebooks:
                     if not l.startswith("%"):
                         # test both sympy and symengine backend
                         if "RT1(" in l:
-                            l.replace("RT1(", f"RT1(lambda_backend={backend}, ")
+                            l = l.replace("RT1(", f"RT1(lambda_backend={backend}, ")
 
                         code += f"{l}\n"
 
