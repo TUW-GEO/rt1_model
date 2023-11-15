@@ -809,7 +809,7 @@ class Analyze3D:
             self.ax.set_ylim(*lim)
             self.ax.set_zlim(*lim)
 
-            self.ax.plotSurfaceScatter(
+            self.ax.plot_surface(
                 *self._getsurface(lim),
                 zorder=0,
                 antialiased=False,
@@ -820,7 +820,7 @@ class Analyze3D:
 
         for i in self._use_contribs:
             self._artists.add(
-                self.ax.plotSurfaceScatter(
+                self.ax.plot_surface(
                     x[i],
                     y[i],
                     z[i],
