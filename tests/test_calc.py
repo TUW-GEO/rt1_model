@@ -14,7 +14,7 @@ class TestRT1(unittest.TestCase):
             geometry="mono",
         )
 
-        self.V = volume.Rayleigh(tau=np.array([0.7]), omega=np.array([0.3]))
+        self.V = volume.Rayleigh()
         self.S = surface.Isotropic()
 
     def test_init(self):
