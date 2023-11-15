@@ -11,7 +11,7 @@ class TestBasicPlotting(unittest.TestCase):
             for key, val in surface.__dict__.items()
             if (
                 isinstance(val, type)
-                and issubclass(val, surface._Surface)
+                and issubclass(val, surface.SurfaceScatter)
                 and not key.startswith("_")
                 and not key in ["LinComb"]
             )
@@ -22,13 +22,13 @@ class TestBasicPlotting(unittest.TestCase):
             for key, val in volume.__dict__.items()
             if (
                 isinstance(val, type)
-                and issubclass(val, volume._Volume)
+                and issubclass(val, volume.VolumeScatter)
                 and not key.startswith("_")
                 and not key in ["LinComb"]
             )
         ]
 
-    def test_surface_init(self):
+    def testSurfaceScatter_init(self):
         a = [0.1, 0.2, 0.3]
 
         choices = dict(

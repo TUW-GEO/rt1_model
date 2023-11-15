@@ -161,13 +161,13 @@ class _Scatter:
 
         try:
             from .plot import polarplot, hemreflect
-            from .surface import _Surface
+            from .surface import SurfaceScatter
 
             # quick way for visualizing the functions as polarplot
             self.polarplot = partial(polarplot, X=self)
             update_wrapper(self.polarplot, polarplot)
 
-            if isinstance(self, _Surface):
+            if isinstance(self, SurfaceScatter):
                 # quick way for visualizing the associated hemispherical reflectance
                 self.hemreflect = partial(hemreflect, SRF=self)
                 update_wrapper(self.hemreflect, hemreflect)

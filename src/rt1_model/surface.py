@@ -6,7 +6,7 @@ from ._scatter import _Scatter, _LinComb
 from .helpers import append_numpy_docstring
 
 
-class _Surface(_Scatter):
+class SurfaceScatter(_Scatter):
     """
     Class for use as surface scattering distribution.
 
@@ -54,13 +54,13 @@ class _Surface(_Scatter):
         raise NotImplementedError
 
 
-class LinComb(_LinComb, _Surface):
+class LinComb(_LinComb, SurfaceScatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-@append_numpy_docstring(_Surface)
-class Isotropic(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class Isotropic(SurfaceScatter):
     """
     Isotropic (Lambertian) surface brdf.
 
@@ -93,8 +93,8 @@ class Isotropic(_Surface):
         return 1.0 / sp.pi
 
 
-@append_numpy_docstring(_Surface)
-class CosineLobe(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class CosineLobe(SurfaceScatter):
     """
     Cosine-lobe of power i.
 
@@ -156,8 +156,8 @@ class CosineLobe(_Surface):
         return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
 
 
-@append_numpy_docstring(_Surface)
-class HenyeyGreenstein(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class HenyeyGreenstein(SurfaceScatter):
     """
     HenyeyGreenstein scattering function.
 
@@ -201,8 +201,8 @@ class HenyeyGreenstein(_Surface):
         return 1.0 * (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
 
 
-@append_numpy_docstring(_Surface)
-class HG_nadirnorm(_Surface):
+@append_numpy_docstring(SurfaceScatter)
+class HG_nadirnorm(SurfaceScatter):
     """
     Nadir-normalized HenyeyGreenstein scattering function.
 

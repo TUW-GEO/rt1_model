@@ -13,8 +13,8 @@ from matplotlib.widgets import Slider, RadioButtons
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 from . import _log
-from .volume import _Volume
-from .surface import _Surface
+from .volume import VolumeScatter
+from .surface import SurfaceScatter
 
 
 def polarplot(
@@ -120,7 +120,7 @@ def polarplot(
     else:
         assert polarax.name == "polar", "you must provide a polar-axes!"
 
-    if isinstance(X, _Surface):
+    if isinstance(X, SurfaceScatter):
         if label is None:
             label = "Surface-Scattering Phase Function"
         angs = ["theta_ex", "theta_s", "phi_ex", "phi_s"]
@@ -133,7 +133,7 @@ def polarplot(
             color=groundcolor,
         )
 
-    if isinstance(X, _Volume):
+    if isinstance(X, VolumeScatter):
         if label is None:
             label = "Volume-Scattering Phase Function"
 
@@ -557,7 +557,7 @@ class Analyze:
         labels = ["Total", "Surface", "Volume", "Interaction"]
 
         if self.R.int_Q is True:
-            sv = self.R._surface_volume().squeeze()
+            sv = self.R.SurfaceScatter_volume().squeeze()
         else:
             sv = None
 
@@ -809,7 +809,7 @@ class Analyze3D:
             self.ax.set_ylim(*lim)
             self.ax.set_zlim(*lim)
 
-            self.ax.plot_surface(
+            self.ax.plotSurfaceScatter(
                 *self._getsurface(lim),
                 zorder=0,
                 antialiased=False,
@@ -820,7 +820,7 @@ class Analyze3D:
 
         for i in self._use_contribs:
             self._artists.add(
-                self.ax.plot_surface(
+                self.ax.plotSurfaceScatter(
                     x[i],
                     y[i],
                     z[i],

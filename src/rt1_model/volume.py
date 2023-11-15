@@ -6,7 +6,7 @@ from ._scatter import _Scatter, _LinComb
 from .helpers import append_numpy_docstring
 
 
-class _Volume(_Scatter):
+class VolumeScatter(_Scatter):
     """
     Class for use as volume scattering distribution.
 
@@ -54,13 +54,13 @@ class _Volume(_Scatter):
         raise NotImplementedError
 
 
-class LinComb(_LinComb, _Volume):
+class LinComb(_LinComb, VolumeScatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-@append_numpy_docstring(_Volume)
-class Isotropic(_Volume):
+@append_numpy_docstring(VolumeScatter)
+class Isotropic(VolumeScatter):
     """
     Define an isotropic scattering distribution.
 
@@ -93,8 +93,8 @@ class Isotropic(_Volume):
         return 1.0 / (4.0 * sp.pi)
 
 
-@append_numpy_docstring(_Volume)
-class Rayleigh(_Volume):
+@append_numpy_docstring(VolumeScatter)
+class Rayleigh(VolumeScatter):
     """
     Rayleigh scattering function.
 
@@ -138,8 +138,8 @@ class Rayleigh(_Volume):
         ).expand()
 
 
-@append_numpy_docstring(_Volume)
-class HenyeyGreenstein(_Volume):
+@append_numpy_docstring(VolumeScatter)
+class HenyeyGreenstein(VolumeScatter):
     """
     HenyeyGreenstein scattering function.
 
@@ -182,8 +182,8 @@ class HenyeyGreenstein(_Volume):
         return legcoefs
 
 
-@append_numpy_docstring(_Volume)
-class HGRayleigh(_Volume):
+@append_numpy_docstring(VolumeScatter)
+class HGRayleigh(VolumeScatter):
     """
     HenyeyGreenstein-Rayleigh scattering function.
 
