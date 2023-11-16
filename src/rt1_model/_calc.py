@@ -496,13 +496,21 @@ class RT1(object):
         if p_ex is not None:
             self.p_ex = p_ex
 
-    def update_params(
-        self,
-        # omega=None, tau=None, NormBRDF=None, bsf=None,
-        **kwargs,
-    ):
+    def update_params(self, **kwargs):
         """
-        Update the model parameters.
+        Update the numerical values used for the model parameters.
+
+        These values will be used as default when calling `R.calc()`
+        to compute the model!
+
+        The default parameter names are:
+
+        - "omega" : The single-scattering albedo of the volume-scattering layer
+        - "tau" : The optical depth of the volume-scattering layer
+        - "bsf" : Fraction of bare-soil contribution (no attenuation due to vegetation)
+        - "NormBRDF" : Normalization factor for the surface BRDF
+
+        The currently set values can be accessed via :py:attr:`RT1.param_dict`.
 
         Parameters
         ----------
@@ -515,6 +523,13 @@ class RT1(object):
         kwargs :
             Any additional parameters required to fully specify the model
             (e.g. variable phase-function parameters).
+
+        Examples
+        --------
+
+        >>> R = RT1(V=volume.Rayleigh(),
+        >>>         SRF=surface.HenyeyGreenstein(t="t", ncoefs=10))
+        >>> R.update_params(omega=0.2, tau=0.3, t=0.3, NormBRDF=0.2)
 
         """
         if "bsf" not in self.param_dict:
