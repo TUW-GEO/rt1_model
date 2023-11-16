@@ -137,6 +137,22 @@ class RT1(object):
 
     """
 
+    # list of names of cached properties
+    _cached_properties = [
+        "_mu_0",
+        "_mu_0_x",
+        "_mu_ex",
+        "_mu_ex_x",
+    ]
+
+    # list of names of cached functions
+    _cached_functions = [
+        "_get_param_funcs",
+        "_get_param_symbs",
+        "_d_volume_dummy_lambda",
+        "_d_surface_dummy_lambda"
+        ]
+
     def __init__(
         self,
         I0=1,
@@ -250,37 +266,41 @@ class RT1(object):
             self.analyze = _getf(ex)
             self.analyze3d = _getf(ex)
 
-    @property
-    def _cached_props(self):
-        """A list of the names of the properties that are cached."""
-        names = [
-            "_mu_0",
-            "_mu_0_x",
-            "_mu_ex",
-            "_mu_ex_x",
-            "_get_param_funcs",
-            "_get_param_symbs",
-        ]
-        return names
+    def _clear_cache(self, *keys):
+        if keys:
+            props = (i for i in keys if i in self._cached_properties)
+            funcs = (i for i in keys if i in self._cached_functions)
+        else:
+            props = self._cached_properties
+            funcs = self._cached_functions
 
-    def _clear_cache(self):
-        type(self)._mu_0.fget.cache_clear()
-        type(self)._mu_0_x.fget.cache_clear()
+        for key in props:
+            getattr(type(self), key).fget.cache_clear()
 
-        type(self)._mu_ex.fget.cache_clear()
-        type(self)._mu_ex_x.fget.cache_clear()
+        for key in funcs:
+            getattr(self, key).cache_clear()
 
-        self._get_param_symbs.cache_clear()
-        self._get_param_funcs.cache_clear()
+    def _clear_param_cache(self):
+        # clear chaced functions & properties that might change if a parameter is set
+        self._clear_cache('_get_param_funcs', '_get_param_symbs')
+
+    def _clear_geom_cache(self):
+        # clear chaced functions & properties that might change if geometry is set
+        self._clear_cache('_mu_0', '_mu_0_x', '_mu_ex', '_mu_ex_x')
 
     def _cache_info(self):
         text = []
-        for name in self._cached_props:
+
+        for name in self._cached_functions:
             try:
-                try:
-                    cinfo = getattr(self, name).cache_info()
-                except Exception:
-                    cinfo = getattr(type(self), name).fget.cache_info()
+                cinfo = getattr(self, name).cache_info()
+                text += [f"{name:<18}:   " + f"{cinfo}"]
+            except Exception:
+                text += [f"{name:<18}:   " + "???"]
+
+        for name in self._cached_properties:
+            try:
+                cinfo = getattr(type(self), name).fget.cache_info()
                 text += [f"{name:<18}:   " + f"{cinfo}"]
             except Exception:
                 text += [f"{name:<18}:   " + "???"]
@@ -294,7 +314,7 @@ class RT1(object):
 
     @NormBRDF.setter
     def NormBRDF(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._NormBRDF = value
 
     @property
@@ -304,7 +324,7 @@ class RT1(object):
 
     @tau.setter
     def tau(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._tau = value
 
     @property
@@ -314,7 +334,7 @@ class RT1(object):
 
     @omega.setter
     def omega(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._omega = value
 
     @property
@@ -324,7 +344,7 @@ class RT1(object):
 
     @bsf.setter
     def bsf(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._bsf = value
 
     @property
@@ -334,6 +354,7 @@ class RT1(object):
 
     @t_0.setter
     def t_0(self, t_0):
+        self._clear_geom_cache()
         # if t_0 is given as scalar input, convert it to 1d numpy array
         if np.isscalar(t_0):
             t_0 = np.array([t_0])
@@ -351,6 +372,7 @@ class RT1(object):
 
     @p_0.setter
     def p_0(self, p_0):
+        self._clear_geom_cache()
         # if p_o is given as scalar input, convert it to 1d numpy array
         if np.isscalar(p_0):
             p_0 = np.array([p_0])
@@ -371,6 +393,8 @@ class RT1(object):
             _log.warning('t_ex is always equal to t_0 if geometry is "mono"!')
             pass
         else:
+            self._clear_geom_cache()
+
             # if t_ex is given as scalar input, convert it to 1d numpy array
             if np.isscalar(t_ex):
                 t_ex = np.array([t_ex])
@@ -396,6 +420,8 @@ class RT1(object):
             _log.warning('p_ex is equal to (p_0 + PI) if geometry is "mono"!')
             pass
         else:
+            self._clear_geom_cache()
+
             # if p_ex is given as scalar input, convert it to 1d numpy array
             if np.isscalar(p_ex):
                 p_ex = np.array([p_ex])
@@ -448,7 +474,7 @@ class RT1(object):
             isinstance(geometry, str) and len(geometry) == 4
         ), "ERROR: geometry must be a 4-character string"
 
-        self._clear_cache()
+        self._clear_geom_cache()
 
         if geometry != self.geometry:
             self._fn_ = None
