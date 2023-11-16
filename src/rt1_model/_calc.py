@@ -770,6 +770,7 @@ class RT1(object):
     @lru_cache()
     def _get_param_funcs(self, param):
         """Lambdified functions used to define tau, omega, NormBRDF and bsf."""
+        # only attempt to lambdify strings and sympy.Basic objects
         if not isinstance(getattr(self, f"_{param}"), (str, sp.Basic)):
             return None
 
@@ -792,13 +793,19 @@ class RT1(object):
         func = self._get_param_funcs(param)
 
         if func is not None:
-            return self._get_param_funcs(param)(
-                **{
-                    key: val
-                    for key, val in self.param_dict.items()
-                    if key in self._get_param_symbs(param)
-                }
-            )
+            try:
+                params = set(self._get_param_symbs(param))
+
+                return func(**{key: self.param_dict[key] for key in params})
+            except Exception:
+                # check for missing parameters in case evaluation fails
+                func_def = getattr(self, f"_{param}")
+                missing = params.difference(self.param_dict)
+
+                assert not missing, (
+                    "Missing specification for the parameters "
+                    f"{missing} to compute the value of '{param} = {func_def}'."
+                )
         else:
             return getattr(self, f"_{param}")
 
