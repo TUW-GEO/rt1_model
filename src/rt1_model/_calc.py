@@ -150,8 +150,8 @@ class RT1(object):
         "_get_param_funcs",
         "_get_param_symbs",
         "_d_volume_dummy_lambda",
-        "_d_surface_dummy_lambda"
-        ]
+        "_d_surface_dummy_lambda",
+    ]
 
     def __init__(
         self,
@@ -282,11 +282,11 @@ class RT1(object):
 
     def _clear_param_cache(self):
         # clear chaced functions & properties that might change if a parameter is set
-        self._clear_cache('_get_param_funcs', '_get_param_symbs')
+        self._clear_cache("_get_param_funcs", "_get_param_symbs")
 
     def _clear_geom_cache(self):
         # clear chaced functions & properties that might change if geometry is set
-        self._clear_cache('_mu_0', '_mu_0_x', '_mu_ex', '_mu_ex_x')
+        self._clear_cache("_mu_0", "_mu_0_x", "_mu_ex", "_mu_ex_x")
 
     def _cache_info(self):
         text = []
