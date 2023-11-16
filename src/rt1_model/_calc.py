@@ -187,7 +187,7 @@ class RT1(object):
         assert len(geometry) == 4, "ERROR: geometry must be " + "a 4-character string"
         self.geometry = geometry
 
-        self.param_dict = dict(bsf=0)
+        self._param_dict = dict(bsf=0)
 
         self.I0 = I0
         self.lambda_backend = lambda_backend
@@ -306,6 +306,11 @@ class RT1(object):
                 text += [f"{name:<18}:   " + "???"]
 
         _log.info("\n" + "\n".join(text))
+
+    @property
+    def param_dict(self):
+        """Dictionary holding the numerical values assigned to the model parameters."""
+        return self._param_dict
 
     @property
     def NormBRDF(self):
