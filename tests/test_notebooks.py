@@ -20,13 +20,14 @@ class TestExampleNotebooks:
             # - exclude lines that use magic commands (e.g. starting with %)
             code_cells = [i["source"] for i in nb["cells"] if i["cell_type"] == "code"]
             code = ""
+
+            # test both sympy and symengine backend
+            code += "from rt1_model import set_lambda_backend\n"
+            code += f"set_lambda_backend('{backend}')\n"
+
             for c in code_cells:
                 for l in c.split("\n"):
                     if not l.startswith("%"):
-                        # test both sympy and symengine backend
-                        if "RT1(" in l:
-                            l = l.replace("RT1(", f"RT1(lambda_backend='{backend}', ")
-
                         code += f"{l}\n"
 
             # run code (use a shared dict for locals and globals to avoid issues

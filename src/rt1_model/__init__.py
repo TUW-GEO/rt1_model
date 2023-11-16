@@ -8,12 +8,12 @@ from functools import lru_cache
 _log = _logging.getLogger(__name__)
 _log.setLevel(_logging.WARNING)
 
-from ._calc import RT1
+from ._calc import RT1, set_lambda_backend
 from . import volume
 from . import surface
 
 
-__all__ = ["RT1", "volume", "surface", "plot"]
+__all__ = ["RT1", "volume", "surface", "plot", "set_lambda_backend"]
 
 
 @lru_cache()
