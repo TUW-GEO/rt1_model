@@ -38,14 +38,12 @@ def set_lambda_backend(lambda_backend):
     ----------
     lambda_backend : str (default = 'symengine' if possible, else 'sympy')
         The backend that will be used to evaluate and compile functions for
-        numerical evaluation of the fn-coefficients.
+        numerical evaluation of symbolic expressions.
 
         Possible values are:
-            - 'sympy' : sympy.lambdify is used to compile
-              the _fnevals function
-            - 'symengine' : symengine.LambdifyCSE is used to
-              compile the _fnevals function. This results in
-              considerable speedup for long fn-coefficients
+            - 'sympy' : sympy.lambdify is used to compile functions with numpy and scipy
+            - 'symengine' : symengine.LambdifyCSE is used to compile functions.
+              This results in considerable speedup for more complex model calculations!
 
     """
     global _init_lambda_backend
