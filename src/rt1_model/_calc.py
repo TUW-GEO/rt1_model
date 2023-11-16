@@ -23,19 +23,88 @@ try:
     from symengine import expand, Lambdify
 
     _init_lambda_backend = "symengine"
+
 except ImportError:
     from sympy import expand
 
     _init_lambda_backend = "sympy"
 
 
+_local_variable_symbols = dict(N=sp.Symbol("N"))
+
+
 def _parse_sympy_param(val):
     # convenience function to set parameters as sympy.Symbols if a string
     # was used as value
     if isinstance(val, str):
-        return sp.parse_expr(val, local_dict=dict(N=sp.Symbol("N")))
+        return sp.parse_expr(val, local_dict=_local_variable_symbols)
     else:
         return np.atleast_1d(val)
+
+
+def _lambdify(variables, functions, lambda_backend=_init_lambda_backend):
+    # lambdify provided functions with sympy or symengine and unify call signature
+
+    var = []
+    for v in np.atleast_1d(variables):
+        if isinstance(v, str):
+            var.append(sp.Symbol(v))
+        else:
+            var.append(v)
+
+    funcs = []
+    for f in np.atleast_1d(functions):
+        if isinstance(f, str):
+            funcs.append(sp.parse_expr(f, local_dict=_local_variable_symbols))
+        else:
+            funcs.append(f)
+
+    # make sure that we don't add additional axes to the returned dataset
+    # if a single function is evaluated
+    if len(funcs) == 1 and not isinstance(functions, list):
+        funcs = funcs[0]
+
+    # use symengine's Lambdify if symengine has been used within
+    # the fn-coefficient generation
+    if lambda_backend == "symengine":
+        # using symengines own "common subexpression elimination"
+        # routine to perform lambdification
+
+        # llvm backend is used to allow pickling of the functions
+        # see https://github.com/symengine/symengine.py/issues/294
+        seng_lambda_func = Lambdify(
+            var,
+            funcs,
+            order="F",
+            cse=True,
+            backend="llvm",
+        )
+
+        var_names = list(map(str, variables))
+
+        def lambda_func(*args, **kwargs):
+            # allow similar call signature as sympy functions
+            # (e.g. both args and kwargs)
+            return seng_lambda_func(
+                *np.broadcast_arrays(
+                    *args, *(kwargs[key] for key in var_names[len(args) :])
+                )
+            )
+
+    elif lambda_backend == "sympy":
+        # using sympy's lambdify without "common subexpression
+        # elimination" to perform lambdification
+
+        lambda_func = sp.lambdify(
+            var,
+            funcs,
+            modules=["numpy", "sympy"],
+            dummify=False,
+        )
+    else:
+        raise TypeError(f"lambda_backend {lambda_backend} is not available")
+
+    return lambda_func
 
 
 class RT1(object):
@@ -774,14 +843,11 @@ class RT1(object):
         if not isinstance(getattr(self, f"_{param}"), (str, sp.Basic)):
             return None
 
-        try:
-            func = sp.lambdify(
-                self._get_param_symbs(param),
-                getattr(self, f"_{param}"),
-                modules=["numpy"],
-            )
-        except Exception:
-            func = None
+        func = _lambdify(
+            self._get_param_symbs(param),
+            getattr(self, f"_{param}"),
+        )
+
         return func
 
     def _eval_param(self, param):
@@ -794,18 +860,22 @@ class RT1(object):
 
         if func is not None:
             try:
-                params = set(self._get_param_symbs(param))
-
+                params = self._get_param_symbs(param)
                 return func(**{key: self.param_dict[key] for key in params})
-            except Exception:
+                # return func(*[self.param_dict[key] for key in params])
+
+            except Exception as ex:
                 # check for missing parameters in case evaluation fails
                 func_def = getattr(self, f"_{param}")
-                missing = params.difference(self.param_dict)
+                missing = set(params).difference(self.param_dict)
 
-                assert not missing, (
-                    "Missing specification for the parameters "
-                    f"{missing} to compute the value of '{param} = {func_def}'."
-                )
+                if missing:
+                    raise TypeError(
+                        "Missing specification for the parameters "
+                        f"{missing} to compute the value of '{param} = {func_def}'."
+                    )
+                else:
+                    raise ex
         else:
             return getattr(self, f"_{param}")
 
@@ -875,54 +945,8 @@ class RT1(object):
                 + tuple(map(str, self.param_dict.keys()))
             )
 
-            # use symengine's Lambdify if symengine has been used within
-            # the fn-coefficient generation
-            if self.lambda_backend == "symengine":
-                _log.debug("Symengine set as backend.")
-                # using symengines own "common subexpression elimination"
-                # routine to perform lambdification
-
-                # llvm backend is used to allow pickling of the functions
-                # see https://github.com/symengine/symengine.py/issues/294
-                self._fnevals_ = Lambdify(
-                    list(variables),
-                    self._fn,
-                    order="F",
-                    cse=True,
-                    backend="llvm",
-                )
-                return self._fnevals_
-            elif self.lambda_backend == "sympy":
-                # using sympy's lambdify without "common subexpression
-                # elimination" to perform lambdification
-
-                _log.debug("Sympy set as backend.")
-
-                sympy_fn = list(map(sp.sympify, self._fn))
-
-                self._fnevals_ = sp.lambdify(
-                    (variables),
-                    sp.sympify(sympy_fn),
-                    modules=["numpy", "sympy"],
-                    dummify=False,
-                )
-
-                self._fnevals_.__doc__ = """
-                                    A function to numerically evaluate the
-                                    fn-coefficients a for given set of
-                                    incidence angles and parameter-values
-                                    as defined in the param_dict dict.
-
-                                    The call-signature is:
-                                        RT1-object._fnevals(theta_0, phi_0, \
-                                        theta_ex, phi_ex, *param_dict.values())
-                                    """
-
-                return self._fnevals_
-            else:
-                raise TypeError(
-                    'Lambda_backend "' + self.lambda_backend + '" is not available',
-                )
+            self._fnevals_ = _lambdify(variables, self._fn)
+            return self._fnevals_
 
             toc = timeit.default_timer()
             _log.debug(
@@ -1188,34 +1212,17 @@ class RT1(object):
             Numerical value of F_int for the given set of parameters
 
         """
-        mu1, mu2, phi1, phi2 = self._mu_0, self._mu_ex, self.p_0, self.p_ex
+        args = np.broadcast_arrays(
+            self.t_0,
+            self.p_0,
+            self.t_ex,
+            self.p_ex,
+            *self.param_dict.values(),
+        )
 
-        # evaluate fn-coefficients
-        if self.lambda_backend == "symengine":
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
+        fn = np.broadcast_arrays(*self._fnevals(*args))
 
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(args))
-        else:
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(*args))
-
-        multip = self._mu_0_x * self._S2_mu(mu1, self.tau)
+        multip = self._mu_0_x * self._S2_mu(self._mu_0, self.tau)
         S = np.sum(fn * multip, axis=0)
         return S
 
@@ -1233,33 +1240,17 @@ class RT1(object):
 
         """
         mu1, mu2, phi1, phi2 = self._mu_ex, self._mu_0, self.p_ex, self.p_0
+        args = np.broadcast_arrays(
+            self.t_ex,
+            self.p_ex,
+            self.t_0,
+            self.p_0,
+            *self.param_dict.values(),
+        )
 
-        # evaluate fn-coefficients
-        if self.lambda_backend == "symengine":
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
+        fn = np.broadcast_arrays(*self._fnevals(*args))
 
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(args))
-        else:
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(*args))
-
-        multip = self._mu_ex_x * self._S2_mu(mu1, self.tau)
+        multip = self._mu_ex_x * self._S2_mu(self._mu_ex, self.tau)
         S = np.sum(fn * multip, axis=0)
         return S
 
@@ -1466,7 +1457,7 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(args, diff, modules=["numpy", "sympy"])
+        return _lambdify(args, diff)
 
     def _d_volume_ddummy(self, key):
         """
@@ -1540,10 +1531,9 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(
+        return _lambdify(
             args,
             sp.diff(self.V._func, sp.Symbol(key)),
-            modules=["numpy", "sympy"],
         )
 
     def _d_surface_ddummy(self, key):
@@ -1612,10 +1602,9 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(
+        return _lambdify(
             args,
             sp.diff(self.SRF._func, sp.Symbol(key)),
-            modules=["numpy", "sympy"],
         )
 
     def jacobian(self, param_list=["omega", "tau", "NormBRDF"]):

@@ -5,6 +5,7 @@ from functools import lru_cache, wraps, partial, update_wrapper
 import sympy as sp
 import numpy as np
 from . import _log
+from ._calc import _lambdify
 
 
 class _Scatter:
@@ -71,18 +72,18 @@ class _Scatter:
         phi_ex = sp.Symbol("phi_ex")
 
         # replace arguments and evaluate expression
-        # sp.lambdify is used to allow array-inputs
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(args)
-        pfunc = sp.lambdify(args, self._func, modules=["numpy", "sympy"])
+        pfunc = _lambdify(args, self._func)
 
+        # TODO check requirement for this!
         # if _func is a constant, lambdify will create a function that returns a scalar
         # which is not suitable for further processing. in that case, vectorize the
         # obtained function
 
         # TODO maybe find a better check for this
         # if self._func.is_constant():   # this is too slow!
-        if len(self._func.free_symbols) == 0:
-            pfunc = np.vectorize(pfunc)
+        # if len(self._func.free_symbols) == 0:
+        #     pfunc = np.vectorize(pfunc)
 
         return pfunc
 

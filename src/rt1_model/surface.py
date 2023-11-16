@@ -143,15 +143,6 @@ class CosineLobe(SurfaceScatter):
         phi_0 = sp.Symbol("phi_0")
         phi_ex = sp.Symbol("phi_ex")
 
-        # self._func = sp.Max(self.scat_angle(theta_i,
-        #                                    theta_s,
-        #                                    phi_i,
-        #                                    phi_s,
-        #                                    a=self.a), 0.)**self.i  # eq. A13
-
-        # alternative formulation avoiding the use of sp.Max()
-        #     (this is done because   sp.lambdify('x',sp.Max(x), "numpy")
-        #      generates a function that can not interpret array inputs.)
         x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
         return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
 
