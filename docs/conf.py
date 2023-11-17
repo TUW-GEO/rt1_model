@@ -19,6 +19,8 @@ extensions = [
 
 autosummary_generate = ["api_reference.rst"]
 
+exclude_patterns = ["build", "examples/.*"]
+
 # autodoc_default_options = {
 #    "members": True,
 #    "undoc-members": False,
