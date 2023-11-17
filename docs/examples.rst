@@ -9,3 +9,4 @@ Examples
    examples/fit_static_parameters.ipynb
    examples/fit_timeseries.ipynb
    examples/fit_multi_temporal.ipynb
+   examples/fit_parameter_functions.ipynb
