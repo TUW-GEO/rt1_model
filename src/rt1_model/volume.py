@@ -2,7 +2,7 @@
 
 import sympy as sp
 
-from ._scatter import _Scatter, _LinComb
+from ._scatter import _Scatter, _LinComb, _parse_sympy_param
 from .helpers import append_numpy_docstring
 
 
@@ -33,7 +33,7 @@ class VolumeScatter(_Scatter):
         if a is None:
             a = getattr(self, "a", [-1.0, 1.0, 1.0])
 
-        self.a = [self._parse_sympy_param(i) for i in a]
+        self.a = [_parse_sympy_param(i) for i in a]
         self._ncoefs = ncoefs
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
@@ -158,7 +158,7 @@ class HenyeyGreenstein(VolumeScatter):
 
         assert t is not None, "The asymmetry parameter t needs to be provided!"
 
-        self.t = self._parse_sympy_param(t)
+        self.t = _parse_sympy_param(t)
 
     @property
     def _func(self):
@@ -203,7 +203,7 @@ class HGRayleigh(VolumeScatter):
 
         assert t is not None, "The asymmetry parameter t needs to be provided!"
 
-        self.t = self._parse_sympy_param(t)
+        self.t = _parse_sympy_param(t)
 
     @property
     def _func(self):

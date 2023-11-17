@@ -63,7 +63,7 @@ def _parse_sympy_param(val):
     if isinstance(val, str):
         return sp.parse_expr(val, local_dict=_local_variable_symbols)
     else:
-        return np.atleast_1d(val)
+        return val
 
 
 def _lambdify(variables, functions):

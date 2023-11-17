@@ -5,7 +5,7 @@ from functools import lru_cache, wraps, partial, update_wrapper
 import sympy as sp
 import numpy as np
 from . import _log
-from ._calc import _lambdify
+from ._calc import _lambdify, _parse_sympy_param
 
 
 class _Scatter:
@@ -54,14 +54,6 @@ class _Scatter:
             + a[1] * sp.sin(t_0) * sp.sin(t_ex) * sp.cos(p_0) * sp.cos(p_ex)
             + a[2] * sp.sin(t_0) * sp.sin(t_ex) * sp.sin(p_0) * sp.sin(p_ex)
         )
-
-    def _parse_sympy_param(self, val):
-        # convenience function to set parameters as sympy.Symbols if a string
-        # was used as value
-        if isinstance(val, str):
-            return sp.parse_expr(val)
-        else:
-            return val
 
     @lru_cache()
     def _lambda_func(self, *args):
@@ -219,7 +211,7 @@ class _LinComb(_Scatter):
         self._weights, self._objs = [], []
         for w, o in choices:
             # cast weights passed as strings to sympy symbols
-            self._weights.append(self._parse_sympy_param(w))
+            self._weights.append(_parse_sympy_param(w))
             self._objs.append(o)
 
         # group weights and functions with respect to the "a" parameter
