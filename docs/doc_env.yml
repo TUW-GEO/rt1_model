@@ -8,6 +8,7 @@ dependencies:
   - sphinx-copybutton
   - matplotlib-base
   - myst-nb
+  - ipympl
   - pip
   - pip:
     - sphinx_rtd_theme
