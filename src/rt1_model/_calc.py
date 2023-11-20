@@ -15,6 +15,7 @@ import timeit
 import numpy as np
 import sympy as sp
 from scipy.special import expi, expn
+from scipy.sparse import vstack, block_diag, csr_matrix
 
 from . import _log
 
@@ -1617,7 +1618,7 @@ class RT1(object):
             sp.diff(self.SRF._func, sp.Symbol(key)),
         )
 
-    def jacobian(self, param_list=["omega", "tau", "NormBRDF"]):
+    def jacobian(self, param_list=["omega", "tau", "NormBRDF"], format="list"):
         """
         Return the jacobian of the total backscatter (without interaction contribution).
 
@@ -1634,12 +1635,26 @@ class RT1(object):
         Parameters
         ----------
         param_list : list
-                     A list of strings that correspond to the names of the parameters
-                     for which the jacobian should be evaluated.
+            A list of strings that correspond to the names of the parameters
+            for which the jacobian should be evaluated.
 
-                     Possible values are: 'omega', 'tau' 'NormBRDF' and
-                     any string corresponding to a sympy.Symbol used in the
-                     definition of V or SRF.
+            Possible values are: 'omega', 'tau' 'NormBRDF' and
+            any string corresponding to a sympy.Symbol used in the
+            definition of V or SRF.
+        format : str
+            - "list": Return a list where each entry represents the 2D jacobian matrix
+              of the corresponding parameter.
+            - "scipy_least_squares": Return a `scipy.sparse.csr_matrix` suitable for
+              use with `scipy.optimize.least_squares`.
+
+              NOTE:
+                At the moment, the refactoring for scipy least_squares is only suitable
+                for constant parameters and/or dynamic parameters that represent
+                timeseries of unique values for each observation.
+
+                Have a look at the
+                `examples <https://rt1-model.readthedocs.io/en/dev/examples.html>`_
+                in the docs for more details!
 
         Returns
         -------
@@ -1676,5 +1691,32 @@ class RT1(object):
                     + str(key)
                     + " is not in param_dict"
                 )
+        if format == "list":
+            return jac
+        elif format == "scipy_least_squares":
+            # Reshape jacobian to fit scipy.optimize requirements
+            # (e.g. a 2D matrix of the shape (# measurements, # parameters) where each
+            # column represents the derivatives with respect to the optimized parameter)
+            jac_columns = []
 
-        return jac
+            for key, j in zip(param_list, jac):
+                if np.size(self.param_dict[key]) == 1:
+                    # Static parameters are affected by all measurements, so the
+                    # corresponding row of the scipy-jacobian is given by the ravelled
+                    # rt1-jacobian values.
+                    jac_columns += csr_matrix(j.ravel())
+                else:
+                    # Dynamic parameters represent timeseries of independent variables
+                    # (a unique value for each timestamp). Therefore we need to convert
+                    # the rt1-jacobian into a block-diagonal matrix so that each
+                    # parameter value is only affected by measurements of the
+                    # corresponding timestamp.
+                    jac_columns += block_diag(j.tolist(), "csr")
+
+            # stack and transpose to comply to scipy.optimize requirements
+            return vstack(jac_columns).T
+        else:
+            raise TypeError(
+                f"{format} is not a valid output format for the jacobian!"
+                "Use one of: ('list', 'scipy_least_squares')."
+            )
