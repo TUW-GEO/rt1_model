@@ -1,7 +1,9 @@
 __pycache__
 .spyproject
 *.egg-info
+*.log
 docs/build/*
 docs/generated/*
 docs/examples/.ipynb_checkpoints/*
+docs/examples/.virtual_documents/*
 .virtual_documents/*
