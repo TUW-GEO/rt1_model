@@ -43,7 +43,7 @@ class TestExampleNotebooks:
 
                     assert (
                         np.mean(diff) < 0.15
-                    ), "Fit results of parameter {key} are not within limits!"
+                    ), f"Fit results of parameter {key} are not within limits!"
 
 
 if __name__ == "__main__":
