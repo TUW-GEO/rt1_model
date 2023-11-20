@@ -7,3 +7,4 @@ docs/generated/*
 docs/examples/.ipynb_checkpoints/*
 docs/examples/.virtual_documents/*
 .virtual_documents/*
+docs/jupyter_execute/*

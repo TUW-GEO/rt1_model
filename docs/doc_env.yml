@@ -7,8 +7,7 @@ dependencies:
   - sphinx
   - sphinx-copybutton
   - matplotlib-base
-  - ipython # for syntax-highlighting with nbsphinx
+  - myst-nb
   - pip
   - pip:
     - sphinx_rtd_theme
-    - nbsphinx
