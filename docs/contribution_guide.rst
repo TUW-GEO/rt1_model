@@ -44,5 +44,5 @@ To build the docs
 
 To render jupyter notebooks in the docs:
 
-- `nbsphinx <https://github.com/spatialaudio/nbsphinx/>`_
-- `ipython <https://ipython.org/>`_
+- `myst-nb <https://myst-nb.readthedocs.io/en/latest/>`_
+- `ipympl <https://github.com/matplotlib/ipympl>`_
