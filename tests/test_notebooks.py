@@ -1,20 +1,22 @@
-import nbformat
-import pytest
 from pathlib import Path
+
+import pytest
+import nbformat
 import numpy as np
+import matplotlib.pyplot as plt
 
 basepath = Path(__file__).parent.parent / "docs" / "examples"
 
 
-class TestExampleNotebooks:
-    @pytest.mark.parametrize(
-        "notebook", filter(lambda x: x.suffix == ".ipynb", basepath.iterdir())
-    )
+class TestExamples:
     @pytest.mark.parametrize("backend", ["sympy", "symengine"])
-    def test_notebook_exec(self, notebook, backend):
-        found_params, sim_params = dict(), dict()
-
-        with open(notebook) as f:
+    @pytest.mark.parametrize(
+        "notebook",
+        filter(lambda x: x.suffix == ".ipynb", basepath.iterdir()),
+        ids=lambda x: x.stem,
+    )
+    def test_notebook(self, notebook, backend):
+        with open(notebook, encoding="utf-8") as f:
             nb = nbformat.read(f, as_version=4)
             # parse all code-cells from notebook
             # - exclude lines that use magic commands (e.g. starting with %)
@@ -36,7 +38,7 @@ class TestExampleNotebooks:
             exec(code, d, d)
 
             # in case the notebook defines simulation and retrieval parameters,
-            # check for approx. equality
+            # named "found_params" and "sim_params", check for approx. equality
             if all(i in d for i in ("found_params", "sim_params")):
                 for key, val in d["found_params"].items():
                     diff = np.abs(d["sim_params"][key] - val)
@@ -45,6 +47,4 @@ class TestExampleNotebooks:
                         np.mean(diff) < 0.15
                     ), f"Fit results of parameter {key} are not within limits!"
 
-
-if __name__ == "__main__":
-    pytest.main()
+        plt.close("all")
