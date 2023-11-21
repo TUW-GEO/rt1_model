@@ -25,7 +25,7 @@ jobs:
 
       - name: Build and Upload to PyPI
         run: |
-          python build
+          python -m build
           python -m twine upload dist/*
         env:
           TWINE_USERNAME: __token__
