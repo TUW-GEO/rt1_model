@@ -16,3 +16,4 @@ Examples
    examples/fit_timeseries.ipynb
    examples/fit_multi_temporal.ipynb
    examples/fit_parameter_functions.ipynb
+   examples/fit_timeseries_with_aux_data.ipynb
