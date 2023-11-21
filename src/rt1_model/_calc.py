@@ -54,6 +54,8 @@ def set_lambda_backend(lambda_backend):
     ], f"Lambda backend {lambda_backend} is not defined!"
     _init_lambda_backend = lambda_backend
 
+    _log.debug("Backend set to {lambda_backend}")
+
 
 _local_variable_symbols = dict(N=sp.Symbol("N"))
 
