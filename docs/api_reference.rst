@@ -22,3 +22,12 @@ API Reference
    surface
    volume
    plot
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :recursive:
+   :template: custom-module-template.rst
+
+   set_lambda_backend
+   set_loglevel

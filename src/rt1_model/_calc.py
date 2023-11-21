@@ -15,6 +15,7 @@ import timeit
 import numpy as np
 import sympy as sp
 from scipy.special import expi, expn
+from scipy.sparse import vstack, block_diag, csr_matrix
 
 from . import _log
 
@@ -23,19 +24,124 @@ try:
     from symengine import expand, Lambdify
 
     _init_lambda_backend = "symengine"
+
 except ImportError:
     from sympy import expand
 
     _init_lambda_backend = "sympy"
 
 
+def set_lambda_backend(lambda_backend):
+    """
+    Set the backend that will be used to evaluate symbolic expressions.
+
+    Parameters
+    ----------
+    lambda_backend : str (default = 'symengine' if possible, else 'sympy')
+        The backend that will be used to evaluate and compile functions for
+        numerical evaluation of symbolic expressions.
+
+        Possible values are:
+            - 'sympy' : sympy.lambdify is used to compile functions with numpy and scipy
+            - 'symengine' : symengine.LambdifyCSE is used to compile functions.
+              This results in considerable speedup for more complex model calculations!
+
+    """
+    global _init_lambda_backend
+    assert lambda_backend in [
+        "sympy",
+        "symengine",
+    ], f"Lambda backend {lambda_backend} is not defined!"
+    _init_lambda_backend = lambda_backend
+
+    _log.debug("Backend set to {lambda_backend}")
+
+
+_local_variable_symbols = dict(N=sp.Symbol("N"))
+
+
 def _parse_sympy_param(val):
     # convenience function to set parameters as sympy.Symbols if a string
     # was used as value
     if isinstance(val, str):
-        return sp.parse_expr(val, local_dict=dict(N=sp.Symbol("N")))
+        return sp.parse_expr(val, local_dict=_local_variable_symbols)
     else:
-        return np.atleast_1d(val)
+        return val
+
+
+def _lambdify(variables, functions):
+    """
+    Lambdify a list of functions with the selected lambda_backend.
+
+    Parameters
+    ----------
+    variables : list
+        A list of strings or sympy.Symbols defining the function variables.
+    functions : list
+        A list of sympy expressions or strings that can be parsed as expressions.
+    """
+    # lambdify provided functions with sympy or symengine and unify call signature
+
+    var = []
+    for v in np.atleast_1d(variables):
+        if isinstance(v, str):
+            var.append(sp.Symbol(v))
+        else:
+            var.append(v)
+
+    funcs = []
+    for f in np.atleast_1d(functions):
+        if isinstance(f, str):
+            funcs.append(sp.parse_expr(f, local_dict=_local_variable_symbols))
+        else:
+            funcs.append(f)
+
+    # make sure that we don't add additional axes to the returned dataset
+    # if a single function is evaluated
+    if len(funcs) == 1 and not isinstance(functions, list):
+        funcs = funcs[0]
+
+    # use symengine's Lambdify if symengine has been used within
+    # the fn-coefficient generation
+    if _init_lambda_backend == "symengine":
+        # using symengines own "common subexpression elimination"
+        # routine to perform lambdification
+
+        # llvm backend is used to allow pickling of the functions
+        # see https://github.com/symengine/symengine.py/issues/294
+        seng_lambda_func = Lambdify(
+            var,
+            funcs,
+            order="F",
+            cse=True,
+            backend="llvm",
+        )
+
+        var_names = list(map(str, variables))
+
+        def lambda_func(*args, **kwargs):
+            # allow similar call signature as sympy functions
+            # (e.g. both args and kwargs)
+            return seng_lambda_func(
+                *np.broadcast_arrays(
+                    *args, *(kwargs[key] for key in var_names[len(args) :])
+                )
+            )
+
+    elif _init_lambda_backend == "sympy":
+        # using sympy's lambdify without "common subexpression
+        # elimination" to perform lambdification
+
+        lambda_func = sp.lambdify(
+            var,
+            funcs,
+            modules=["numpy", "sympy"],
+            dummify=False,
+        )
+    else:
+        raise TypeError(f"lambda_backend {_init_lambda_backend} is not available")
+
+    return lambda_func
 
 
 class RT1(object):
@@ -44,88 +150,32 @@ class RT1(object):
 
     Parameters
     ----------
-    I0 : float
-         Incident intensity. (Only relevant if sig0 = False)
-
-    t_0 : array_like(float)
-          Array of incident zenith-angles in radians.
-
-    p_0 : array_like(float)
-          Array of incident azimuth-angles in radians.
-
-    t_ex : array_like(float)
-           Array of exit zenith-angles in radians.
-
-           Only relevant for bi-static geometry! For monostatic calculations
-           (e.g. `geometry="mono"`), theta_ex is automatically set to t_0
-
-    p_ex : array_like(float)
-           Array of exit azimuth-angles in radians.
-
-           Only relevant for bi-static geometry! For monostatic calculations
-           (e.g. `geometry="mono"`), phi_ex is automatically set to p_0 + np.pi
-
-    V : rt1.Volume object
+    V : :py:class:`rt1_model.volume.VolumeScatter` object
         The volume-scattering phase function to use.
-
-    SRF : rt1.Surface object
+    SRF : :py:class:`rt1_model.volume.SurfaceScatter` object
         The surface-scattering phase function (BRDF) to use.
-
-    geometry : str (default = 'mono')
-        A 4 character string specifying which components of the angles should
-        be fixed or variable. This is done to significantly speed up the
-        evaluation-process of the fn-coefficient generation!
-
-        - Passing  geometry = 'mono'  indicates a monstatic measurement geometry.
-          (i.e.:  t_ex = t_0, p_ex = p_0 + pi)
-          Note: Inputs for `t_ex` and `p_ex` are ignored for monostatic calculations!
-
-        - For bi-static geometry, The 4 characters represent in order the properties of:
-          t_0, t_ex, p_0, p_ex
-
-          - 'f' indicates that the angle is treated 'fixed'
-            (i.e. as a numerical constant)
-          - 'v' indicates that the angle is treated 'variable'
-            (i.e. as a sympy-variable)
-
-        For detailed information on the specification of the
-        geometry-parameter, please have a look at the "Evaluation Geometries"
-        section of the documentation:
-        (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
-
+    sig0 : bool
+        Indicator if sigma0 (True) or intensity (False) values should be calculated.
+    dB : bool
+        Indicator if results are returned in dB (True) or linear units (False).
+        The default is True.
     int_Q : bool (default = True)
         Indicator whether the interaction-term should be calculated or not.
-
-    fn_input : array_like(sympy expression), optional (default = None)
+    fn_input : array_like(sympy expressions), optional (default = None)
         Optional input of pre-calculated array of sympy-expressions
         to speedup calculations where the same fn-coefficients can be used.
         If None, the coefficients will be calculated automatically at the
         initialization of the RT1-object.
-
     fnevals_input : callable, optional (default = None)
         Optional input of pre-compiled function to numerically evaluate
         the fn_coefficients. if None, the function will be compiled
         using the fn-coefficients provided.
-        Note that once the _fnevals function is provided, the
+        Note that once the fnevals functions are provided, the
         fn-coefficients are no longer needed and have no effect on the
         calculated results!
-
-    lambda_backend : str (default = 'symengine' if possible, else 'sympy')
-        The backend that will be used to evaluate and compile functions for
-        numerical evaluation of the fn-coefficients.
-
-        Possible values are:
-            - 'sympy' : sympy.lambdify is used to compile
-              the _fnevals function
-            - 'symengine' : symengine.LambdifyCSE is used to
-              compile the _fnevals function. This results in
-              considerable speedup for long fn-coefficients
-    sig0 : bool
-        Indicator if sigma0 (True) or intensity (False) values should be calculated.
-
-    dB : bool
-        Indicator if results are returned in dB (True) or linear units (False).
-        The default is True.
+    I0 : array-like (float)
+         Incident intensity. (Only relevant if sig0 = False)
+         The default is 1.
 
     Attributes
     ----------
@@ -137,57 +187,60 @@ class RT1(object):
 
     """
 
+    # list of names of cached properties
+    _cached_properties = [
+        "_mu_0",
+        "_mu_0_x",
+        "_mu_ex",
+        "_mu_ex_x",
+    ]
+
+    # list of names of cached functions
+    _cached_functions = [
+        "_get_param_funcs",
+        "_get_param_symbs",
+        "_d_volume_dummy_lambda",
+        "_d_surface_dummy_lambda",
+    ]
+
     def __init__(
         self,
-        I0=1,
-        t_0=0,
-        t_ex=None,
-        p_0=0,
-        p_ex=None,
         V=None,
         SRF=None,
-        geometry="mono",
         int_Q=True,
-        fn_input=None,
-        fnevals_input=None,
-        lambda_backend=_init_lambda_backend,
         sig0=True,
         dB=True,
+        fn_input=None,
+        fnevals_input=None,
+        I0=1.0,
     ):
-        self._bsf = "bsf"
-        self._NormBRDF = "NormBRDF"
-        self._tau = "tau"
-        self._omega = "omega"
-
         assert V is not None, "You must provide a volume scattering phase function!"
         self.V = V
 
         assert SRF is not None, "You must provide a BRDF!"
         self.SRF = SRF
 
-        assert isinstance(geometry, str), (
-            "ERROR: geometry must be " + "a 4-character string"
-        )
-        assert len(geometry) == 4, "ERROR: geometry must be " + "a 4-character string"
-        self.geometry = geometry
-
-        self.param_dict = dict(bsf=0)
-
-        self.I0 = I0
-        self.lambda_backend = lambda_backend
         self.int_Q = int_Q
 
         self.fn_input = fn_input
         self.fnevals_input = fnevals_input
 
-        self.t_0 = t_0
-        self.p_0 = p_0
-        if self.geometry != "mono":
-            self.t_ex = t_ex
-            self.p_ex = p_ex
-
         self.sig0 = sig0
         self.dB = dB
+
+        self.I0 = I0
+
+        # default parameter names
+        self._bsf = "bsf"
+        self._NormBRDF = "NormBRDF"
+        self._tau = "tau"
+        self._omega = "omega"
+
+        self._param_dict = dict(bsf=0)
+
+        # set default geometry
+        self._geometry = "mono"
+        self.set_geometry(t_0=np.pi / 4, p_0=0)
 
         self._register_plotfuncs()
 
@@ -204,7 +257,7 @@ class RT1(object):
                 _log.warning(f"Setting {Nonekey} to None")
                 self.__dict__[Nonekey] = None
 
-        if self.lambda_backend == "symengine":
+        if _init_lambda_backend == "symengine":
             _log.warning(
                 "The dump of the _fnevals functions "
                 + "generated by symengine will be platform-dependent!"
@@ -250,42 +303,51 @@ class RT1(object):
             self.analyze = _getf(ex)
             self.analyze3d = _getf(ex)
 
-    @property
-    def _cached_props(self):
-        """A list of the names of the properties that are cached."""
-        names = [
-            "_mu_0",
-            "_mu_0_x",
-            "_mu_ex",
-            "_mu_ex_x",
-            "_get_param_funcs",
-            "_get_param_symbs",
-        ]
-        return names
+    def _clear_cache(self, *keys):
+        if keys:
+            props = (i for i in keys if i in self._cached_properties)
+            funcs = (i for i in keys if i in self._cached_functions)
+        else:
+            props = self._cached_properties
+            funcs = self._cached_functions
 
-    def _clear_cache(self):
-        type(self)._mu_0.fget.cache_clear()
-        type(self)._mu_0_x.fget.cache_clear()
+        for key in props:
+            getattr(type(self), key).fget.cache_clear()
 
-        type(self)._mu_ex.fget.cache_clear()
-        type(self)._mu_ex_x.fget.cache_clear()
+        for key in funcs:
+            getattr(self, key).cache_clear()
 
-        self._get_param_symbs.cache_clear()
-        self._get_param_funcs.cache_clear()
+    def _clear_param_cache(self):
+        # clear chaced functions & properties that might change if a parameter is set
+        self._clear_cache("_get_param_funcs", "_get_param_symbs")
+
+    def _clear_geom_cache(self):
+        # clear chaced functions & properties that might change if geometry is set
+        self._clear_cache("_mu_0", "_mu_0_x", "_mu_ex", "_mu_ex_x")
 
     def _cache_info(self):
         text = []
-        for name in self._cached_props:
+
+        for name in self._cached_functions:
             try:
-                try:
-                    cinfo = getattr(self, name).cache_info()
-                except Exception:
-                    cinfo = getattr(type(self), name).fget.cache_info()
+                cinfo = getattr(self, name).cache_info()
+                text += [f"{name:<18}:   " + f"{cinfo}"]
+            except Exception:
+                text += [f"{name:<18}:   " + "???"]
+
+        for name in self._cached_properties:
+            try:
+                cinfo = getattr(type(self), name).fget.cache_info()
                 text += [f"{name:<18}:   " + f"{cinfo}"]
             except Exception:
                 text += [f"{name:<18}:   " + "???"]
 
         _log.info("\n" + "\n".join(text))
+
+    @property
+    def param_dict(self):
+        """Dictionary holding the numerical values assigned to the model parameters."""
+        return self._param_dict
 
     @property
     def NormBRDF(self):
@@ -294,7 +356,7 @@ class RT1(object):
 
     @NormBRDF.setter
     def NormBRDF(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._NormBRDF = value
 
     @property
@@ -304,7 +366,7 @@ class RT1(object):
 
     @tau.setter
     def tau(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._tau = value
 
     @property
@@ -314,7 +376,7 @@ class RT1(object):
 
     @omega.setter
     def omega(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._omega = value
 
     @property
@@ -324,7 +386,7 @@ class RT1(object):
 
     @bsf.setter
     def bsf(self, value):
-        self._clear_cache()
+        self._clear_param_cache()
         self._bsf = value
 
     @property
@@ -334,6 +396,7 @@ class RT1(object):
 
     @t_0.setter
     def t_0(self, t_0):
+        self._clear_geom_cache()
         # if t_0 is given as scalar input, convert it to 1d numpy array
         if np.isscalar(t_0):
             t_0 = np.array([t_0])
@@ -351,6 +414,7 @@ class RT1(object):
 
     @p_0.setter
     def p_0(self, p_0):
+        self._clear_geom_cache()
         # if p_o is given as scalar input, convert it to 1d numpy array
         if np.isscalar(p_0):
             p_0 = np.array([p_0])
@@ -371,6 +435,8 @@ class RT1(object):
             _log.warning('t_ex is always equal to t_0 if geometry is "mono"!')
             pass
         else:
+            self._clear_geom_cache()
+
             # if t_ex is given as scalar input, convert it to 1d numpy array
             if np.isscalar(t_ex):
                 t_ex = np.array([t_ex])
@@ -396,12 +462,56 @@ class RT1(object):
             _log.warning('p_ex is equal to (p_0 + PI) if geometry is "mono"!')
             pass
         else:
+            self._clear_geom_cache()
+
             # if p_ex is given as scalar input, convert it to 1d numpy array
             if np.isscalar(p_ex):
                 p_ex = np.array([p_ex])
             self._p_ex = p_ex
 
-    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None, geometry="mono"):
+    @property
+    def geometry(self):
+        """
+        The geometry for which the model should be evaluated.
+
+        A 4 character string specifying which components of the angles should
+        be fixed or variable. This is done to significantly speed up the
+        evaluation-process of the fn-coefficient generation.
+
+        The 4 characters represent in order the properties of:
+            t_0, t_ex, p_0, p_ex
+
+        - 'f' indicates that the angle is treated 'fixed'
+          (i.e. treated as a numerical constant)
+        - 'v' indicates that the angle is treated 'variable'
+          (i.e. treated as a sympy-variable)
+        - Passing  geometry = 'mono'  indicates a monstatic geometry
+          (i.e.:  t_ex = t_0, p_ex = p_0 + pi)
+          If monostatic geometry is used, the input-values of t_ex and p_ex
+          have no effect on the calculations!
+
+        For detailed information on the specification of the
+        geometry-parameter, please have a look at the "Evaluation Geometries"
+        section of the documentation:
+        (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
+
+        """
+        return self._geometry
+
+    @geometry.setter
+    def geometry(self, geometry):
+        assert (
+            isinstance(geometry, str) and len(geometry) == 4
+        ), "ERROR: geometry must be a 4-character string!"
+
+        if geometry != self._geometry:
+            self._fn_ = None
+            self._fnevals_ = None
+            self._clear_geom_cache()
+
+        self._geometry = geometry
+
+    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None, geometry=None):
         """
         Set the observation geometry (e.g. incidence-angles and mono/bistatic geometry).
 
@@ -421,18 +531,20 @@ class RT1(object):
                Array of exit azimuth-angles in radians
                (if geometry is 'mono', phi_ex is automatically set to p_0 + np.pi)
 
-        geometry : str (default = 'vvvv')
-            4 character string specifying which components of the angles should
+        geometry : str (default = 'mono')
+            The geometry for which the model should be evaluated.
+
+            A 4 character string specifying which components of the angles should
             be fixed or variable. This is done to significantly speed up the
-            evaluation-process of the fn-coefficient generation
+            evaluation-process of the fn-coefficient generation.
 
             The 4 characters represent in order the properties of:
                 t_0, t_ex, p_0, p_ex
 
             - 'f' indicates that the angle is treated 'fixed'
-              (i.e. as a numerical constant)
+              (i.e. treated as a numerical constant)
             - 'v' indicates that the angle is treated 'variable'
-              (i.e. as a sympy-variable)
+              (i.e. treated as a sympy-variable)
             - Passing  geometry = 'mono'  indicates a monstatic geometry
               (i.e.:  t_ex = t_0, p_ex = p_0 + pi)
               If monostatic geometry is used, the input-values of t_ex and p_ex
@@ -444,17 +556,8 @@ class RT1(object):
             (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
 
         """
-        assert (
-            isinstance(geometry, str) and len(geometry) == 4
-        ), "ERROR: geometry must be a 4-character string"
-
-        self._clear_cache()
-
-        if geometry != self.geometry:
-            self._fn_ = None
-            self._fnevals_ = None
-
-        self.geometry = geometry
+        if geometry is not None:
+            self.geometry = geometry
 
         if t_0 is not None:
             self.t_0 = t_0
@@ -465,35 +568,48 @@ class RT1(object):
         if p_ex is not None:
             self.p_ex = p_ex
 
-    def update_params(
-        self,
-        # omega=None, tau=None, NormBRDF=None, bsf=None,
-        **kwargs,
-    ):
+    def update_params(self, **kwargs):
         """
-        Update the model parameters.
+        Update the numerical values used for the model parameters.
+
+        These values will be used as default when calling `R.calc()`
+        to compute the model!
+
+        The default parameter names are:
+
+        - "omega" : The single-scattering albedo of the volume-scattering layer
+        - "tau" : The optical depth of the volume-scattering layer
+        - "NormBRDF" : Normalization factor for the surface BRDF
+        - "bsf" : Fraction of bare-soil contribution (no attenuation due to vegetation)
+
+        The currently set values can be accessed via :py:attr:`RT1.param_dict`.
 
         Parameters
         ----------
-        omega : array-like
-                The single-scattering albedo of the volume-scattering layer
-        tau : array-like
-              The optical depth of the volume-scattering layer
-        bsf : float (default = 0.)
-              fraction of bare-soil contribution (no attenuation due to vegetation)
         kwargs :
-            Any additional parameters required to fully specify the model
-            (e.g. variable phase-function parameters).
+            Any parameters required to fully specify the model (e.g. omega, tau,
+            NormBRDF, bsf and all required scattering distribution parameters).
+
+        Examples
+        --------
+        >>> R = RT1(V=volume.Rayleigh(),
+        >>>         SRF=surface.HenyeyGreenstein(t="t", ncoefs=10))
+        >>> R.update_params(omega=0.2, tau=0.3, t=0.3, NormBRDF=0.2)
 
         """
-        if "bsf" not in self.param_dict:
+        # if bsf is not explicitly provided (and still the default), set it to 0
+        if (
+            isinstance(self._bsf, str)
+            and self._bsf == "bsf"
+            and "bsf" not in self.param_dict
+        ):
             kwargs.setdefault("bsf", 0)
 
         self.param_dict.update({key: np.atleast_1d(val) for key, val in kwargs.items()})
 
     def calc(self, **params):
         """
-        Calculate model and return result.
+        Calculate all model components and return result.
 
         Perform actual calculation of bistatic scattering at top of the
         random volume (z=0) for the specified geometry. For details please
@@ -524,24 +640,24 @@ class RT1(object):
             self.update_params(**params)
 
             if isinstance(self.tau, (int, float)):
-                Isurf = self.surface()
+                Isurf = self._surface()
                 # differentiation for non-existing canopy, as otherwise NAN values
                 if self.tau > 0.0:
-                    Ivol = self.volume()
+                    Ivol = self._volume()
                     if self.int_Q is True:
-                        Iint = self.interaction()
+                        Iint = self._interaction()
                     else:
                         Iint = np.array([0.0])
                 else:
                     Ivol = np.full_like(Isurf, 0.0)
                     Iint = np.full_like(Isurf, 0.0)
             else:
-                Isurf = self.surface()
-                Ivol = self.volume()
+                Isurf = self._surface()
+                Ivol = self._volume()
                 # TODO this should be fixed more properly
                 # (i.e. for tau=0, no interaction-term should be calculated)
                 if self.int_Q is True:
-                    Iint = self.interaction()
+                    Iint = self._interaction()
                     # check if there are nan-values present that result from
                     # (self.tau = 0) and replace them with 0
                     wherenan = np.isnan(Iint)
@@ -562,7 +678,7 @@ class RT1(object):
                 )
             else:
                 ret = self._convert_sig0_db(
-                    np.stack((Isurf + Ivol + Iint, Isurf, Ivol, Iint)),
+                    np.stack((Isurf + Ivol, Isurf, Ivol)),
                 )
 
             return ret
@@ -595,11 +711,15 @@ class RT1(object):
         Returns
         -------
         array_like(float)
-            Numerical value of the surface-contribution for the
-            given set of parameters
+            Numerical value of the surface-contribution with respect to the currently
+            set parameters in :py:attr:`param_dict`.
 
         """
-        # bare soil contribution
+
+        return self._convert_sig0_db(self._surface())
+
+    def _surface(self):
+        # bare soil contribution (intensity)
         I_bs = (
             self.I0
             * self._mu_0
@@ -625,10 +745,14 @@ class RT1(object):
         Returns
         -------
         array_like(float)
-            Numerical value of the volume-contribution for the
-            given set of parameters
+            Numerical value of the volume-contribution with respect to the currently
+            set parameters in :py:attr:`param_dict`.
 
         """
+        return self._convert_sig0_db(self._volume())
+
+    def _volume(self):
+        # volume contribution (intensity)
         vol = (
             (self.I0 * self.omega * self._mu_0 / (self._mu_0 + self._mu_ex))
             * (1.0 - np.exp(-(self.tau / self._mu_0) - (self.tau / self._mu_ex)))
@@ -652,10 +776,14 @@ class RT1(object):
         Returns
         -------
         array_like(float)
-            Numerical value of the interaction-contribution for
-            the given set of parameters
+            Numerical value of the interaction-contribution with respect to the
+            currently set parameters in :py:attr:`param_dict`.
 
         """
+        return self._convert_sig0_db(self._interaction())
+
+    def _interaction(self):
+        # interaction contribution (intensity)
         Fint1 = self._calc_Fint_1()
         Fint2 = self._calc_Fint_2()
 
@@ -675,7 +803,7 @@ class RT1(object):
         # convenience function to get surface + volume (e.g. without interaction)
 
         ret = self._convert_sig0_db(
-            self.surface() + self.volume(),
+            self._surface() + self._volume(),
         )
 
         return ret
@@ -687,7 +815,7 @@ class RT1(object):
             dB = self.dB
 
         if sig0 is True:
-            signorm = 4.0 * np.pi * self._mu_0
+            signorm = 4.0 * np.pi * self._mu_0 / self.I0
         else:
             signorm = 1.0
 
@@ -724,17 +852,15 @@ class RT1(object):
     @lru_cache()
     def _get_param_funcs(self, param):
         """Lambdified functions used to define tau, omega, NormBRDF and bsf."""
+        # only attempt to lambdify strings and sympy.Basic objects
         if not isinstance(getattr(self, f"_{param}"), (str, sp.Basic)):
             return None
 
-        try:
-            func = sp.lambdify(
-                self._get_param_symbs(param),
-                getattr(self, f"_{param}"),
-                modules=["numpy"],
-            )
-        except Exception:
-            func = None
+        func = _lambdify(
+            self._get_param_symbs(param),
+            getattr(self, f"_{param}"),
+        )
+
         return func
 
     def _eval_param(self, param):
@@ -746,13 +872,23 @@ class RT1(object):
         func = self._get_param_funcs(param)
 
         if func is not None:
-            return self._get_param_funcs(param)(
-                **{
-                    key: val
-                    for key, val in self.param_dict.items()
-                    if key in self._get_param_symbs(param)
-                }
-            )
+            try:
+                params = self._get_param_symbs(param)
+                return func(**{key: self.param_dict[key] for key in params})
+                # return func(*[self.param_dict[key] for key in params])
+
+            except Exception as ex:
+                # check for missing parameters in case evaluation fails
+                func_def = getattr(self, f"_{param}")
+                missing = set(params).difference(self.param_dict)
+
+                if missing:
+                    raise TypeError(
+                        "Missing specification for the parameters "
+                        f"{missing} to compute the value of '{param} = {func_def}'."
+                    )
+                else:
+                    raise ex
         else:
             return getattr(self, f"_{param}")
 
@@ -822,54 +958,8 @@ class RT1(object):
                 + tuple(map(str, self.param_dict.keys()))
             )
 
-            # use symengine's Lambdify if symengine has been used within
-            # the fn-coefficient generation
-            if self.lambda_backend == "symengine":
-                _log.debug("Symengine set as backend.")
-                # using symengines own "common subexpression elimination"
-                # routine to perform lambdification
-
-                # llvm backend is used to allow pickling of the functions
-                # see https://github.com/symengine/symengine.py/issues/294
-                self._fnevals_ = Lambdify(
-                    list(variables),
-                    self._fn,
-                    order="F",
-                    cse=True,
-                    backend="llvm",
-                )
-                return self._fnevals_
-            elif self.lambda_backend == "sympy":
-                # using sympy's lambdify without "common subexpression
-                # elimination" to perform lambdification
-
-                _log.debug("Sympy set as backend.")
-
-                sympy_fn = list(map(sp.sympify, self._fn))
-
-                self._fnevals_ = sp.lambdify(
-                    (variables),
-                    sp.sympify(sympy_fn),
-                    modules=["numpy", "sympy"],
-                    dummify=False,
-                )
-
-                self._fnevals_.__doc__ = """
-                                    A function to numerically evaluate the
-                                    fn-coefficients a for given set of
-                                    incidence angles and parameter-values
-                                    as defined in the param_dict dict.
-
-                                    The call-signature is:
-                                        RT1-object._fnevals(theta_0, phi_0, \
-                                        theta_ex, phi_ex, *param_dict.values())
-                                    """
-
-                return self._fnevals_
-            else:
-                raise TypeError(
-                    'Lambda_backend "' + self.lambda_backend + '" is not available',
-                )
+            self._fnevals_ = _lambdify(variables, self._fn)
+            return self._fnevals_
 
             toc = timeit.default_timer()
             _log.debug(
@@ -1135,34 +1225,17 @@ class RT1(object):
             Numerical value of F_int for the given set of parameters
 
         """
-        mu1, mu2, phi1, phi2 = self._mu_0, self._mu_ex, self.p_0, self.p_ex
+        args = np.broadcast_arrays(
+            self.t_0,
+            self.p_0,
+            self.t_ex,
+            self.p_ex,
+            *self.param_dict.values(),
+        )
 
-        # evaluate fn-coefficients
-        if self.lambda_backend == "symengine":
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
+        fn = np.broadcast_arrays(*self._fnevals(*args))
 
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(args))
-        else:
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(*args))
-
-        multip = self._mu_0_x * self._S2_mu(mu1, self.tau)
+        multip = self._mu_0_x * self._S2_mu(self._mu_0, self.tau)
         S = np.sum(fn * multip, axis=0)
         return S
 
@@ -1180,33 +1253,17 @@ class RT1(object):
 
         """
         mu1, mu2, phi1, phi2 = self._mu_ex, self._mu_0, self.p_ex, self.p_0
+        args = np.broadcast_arrays(
+            self.t_ex,
+            self.p_ex,
+            self.t_0,
+            self.p_0,
+            *self.param_dict.values(),
+        )
 
-        # evaluate fn-coefficients
-        if self.lambda_backend == "symengine":
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
+        fn = np.broadcast_arrays(*self._fnevals(*args))
 
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(args))
-        else:
-            args = np.broadcast_arrays(
-                np.arccos(mu1),
-                phi1,
-                np.arccos(mu2),
-                phi2,
-                *self.param_dict.values(),
-            )
-            # to correct for 0 dimensional arrays if a fn-coefficient
-            # is identical to 0 (in a symbolic manner)
-            fn = np.broadcast_arrays(*self._fnevals(*args))
-
-        multip = self._mu_ex_x * self._S2_mu(mu1, self.tau)
+        multip = self._mu_ex_x * self._S2_mu(self._mu_ex, self.tau)
         S = np.sum(fn * multip, axis=0)
         return S
 
@@ -1413,7 +1470,7 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(args, diff, modules=["numpy", "sympy"])
+        return _lambdify(args, diff)
 
     def _d_volume_ddummy(self, key):
         """
@@ -1487,10 +1544,9 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(
+        return _lambdify(
             args,
             sp.diff(self.V._func, sp.Symbol(key)),
-            modules=["numpy", "sympy"],
         )
 
     def _d_surface_ddummy(self, key):
@@ -1559,13 +1615,12 @@ class RT1(object):
 
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(self.param_dict.keys())
 
-        return sp.lambdify(
+        return _lambdify(
             args,
             sp.diff(self.SRF._func, sp.Symbol(key)),
-            modules=["numpy", "sympy"],
         )
 
-    def jacobian(self, param_list=["omega", "tau", "NormBRDF"]):
+    def jacobian(self, param_list=["omega", "tau", "NormBRDF"], format="list"):
         """
         Return the jacobian of the total backscatter (without interaction contribution).
 
@@ -1582,12 +1637,26 @@ class RT1(object):
         Parameters
         ----------
         param_list : list
-                     A list of strings that correspond to the names of the parameters
-                     for which the jacobian should be evaluated.
+            A list of strings that correspond to the names of the parameters
+            for which the jacobian should be evaluated.
 
-                     Possible values are: 'omega', 'tau' 'NormBRDF' and
-                     any string corresponding to a sympy.Symbol used in the
-                     definition of V or SRF.
+            Possible values are: 'omega', 'tau' 'NormBRDF' and
+            any string corresponding to a sympy.Symbol used in the
+            definition of V or SRF.
+        format : str
+            - "list": Return a list where each entry represents the 2D jacobian matrix
+              of the corresponding parameter.
+            - "scipy_least_squares": Return a `scipy.sparse.csr_matrix` suitable for
+              use with `scipy.optimize.least_squares`.
+
+              NOTE:
+                At the moment, the refactoring for scipy least_squares is only suitable
+                for constant parameters and/or dynamic parameters that represent
+                timeseries of unique values for each observation.
+
+                Have a look at the
+                `examples <https://rt1-model.readthedocs.io/en/dev/examples.html>`_
+                in the docs for more details!
 
         Returns
         -------
@@ -1596,10 +1665,11 @@ class RT1(object):
               omega, tau and NormBRDF
 
         """
+
         if self.sig0 is True and self.dB is False:
             norm = 4.0 * np.pi * self._mu_0
         elif self.dB is True:
-            norm = 10.0 / (np.log(10.0) * (self.surface() + self.volume()))
+            norm = 10.0 / (np.log(10.0) * (self._surface() + self._volume()))
         else:
             norm = 1.0
 
@@ -1623,5 +1693,32 @@ class RT1(object):
                     + str(key)
                     + " is not in param_dict"
                 )
+        if format == "list":
+            return jac
+        elif format == "scipy_least_squares":
+            # Reshape jacobian to fit scipy.optimize requirements
+            # (e.g. a 2D matrix of the shape (# measurements, # parameters) where each
+            # column represents the derivatives with respect to the optimized parameter)
+            jac_columns = []
 
-        return jac
+            for key, j in zip(param_list, jac):
+                if np.size(self.param_dict[key]) == 1:
+                    # Static parameters are affected by all measurements, so the
+                    # corresponding row of the scipy-jacobian is given by the ravelled
+                    # rt1-jacobian values.
+                    jac_columns += csr_matrix(j.ravel())
+                else:
+                    # Dynamic parameters represent timeseries of independent variables
+                    # (a unique value for each timestamp). Therefore we need to convert
+                    # the rt1-jacobian into a block-diagonal matrix so that each
+                    # parameter value is only affected by measurements of the
+                    # corresponding timestamp.
+                    jac_columns += block_diag(j.tolist(), "csr")
+
+            # stack and transpose to comply to scipy.optimize requirements
+            return vstack(jac_columns).T
+        else:
+            raise TypeError(
+                f"{format} is not a valid output format for the jacobian!"
+                "Use one of: ('list', 'scipy_least_squares')."
+            )

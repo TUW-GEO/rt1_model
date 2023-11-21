@@ -2,7 +2,7 @@
 
 import sympy as sp
 
-from ._scatter import _Scatter, _LinComb
+from ._scatter import _Scatter, _LinComb, _parse_sympy_param
 from .helpers import append_numpy_docstring
 
 
@@ -33,7 +33,7 @@ class SurfaceScatter(_Scatter):
         if a is None:
             a = getattr(self, "a", [1.0, 1.0, 1.0])
 
-        self.a = [self._parse_sympy_param(i) for i in a]
+        self.a = [_parse_sympy_param(i) for i in a]
         self._ncoefs = ncoefs
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
@@ -143,15 +143,6 @@ class CosineLobe(SurfaceScatter):
         phi_0 = sp.Symbol("phi_0")
         phi_ex = sp.Symbol("phi_ex")
 
-        # self._func = sp.Max(self.scat_angle(theta_i,
-        #                                    theta_s,
-        #                                    phi_i,
-        #                                    phi_s,
-        #                                    a=self.a), 0.)**self.i  # eq. A13
-
-        # alternative formulation avoiding the use of sp.Max()
-        #     (this is done because   sp.lambdify('x',sp.Max(x), "numpy")
-        #      generates a function that can not interpret array inputs.)
         x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
         return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
 
@@ -176,7 +167,7 @@ class HenyeyGreenstein(SurfaceScatter):
 
         assert t is not None, "The asymmetry parameter t needs to be provided!"
 
-        self.t = self._parse_sympy_param(t)
+        self.t = _parse_sympy_param(t)
 
     @property
     def _func(self):
@@ -222,7 +213,7 @@ class HG_nadirnorm(SurfaceScatter):
 
         assert t is not None, "The asymmetry parameter t needs to be provided!"
 
-        self.t = self._parse_sympy_param(t)
+        self.t = _parse_sympy_param(t)
 
     @property
     def _func(self):

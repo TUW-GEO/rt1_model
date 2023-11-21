@@ -457,7 +457,9 @@ class Analyze:
         if self.R.geometry != "mono":
             _log.warning("The analyze-plot shows results for monostatic geometry!")
 
-        self.R.set_geometry(t_0=[np.deg2rad(self._t0)], p_0=np.pi, geometry="mono")
+        self.R.set_geometry(
+            t_0=np.deg2rad(self._t0)[np.newaxis], p_0=np.pi, geometry="mono"
+        )
 
         # number of intermediate parameter values to calculate (for range-indication)
         self._n_mima_samples = 20
