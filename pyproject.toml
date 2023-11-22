@@ -24,7 +24,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["numpy", "scipy", "sympy", "numpydoc"]
+dependencies = ["numpy", "scipy", "sympy"]
 
 [project.optional-dependencies]
 full = ["symengine", "matplotlib"]
