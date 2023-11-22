@@ -162,8 +162,8 @@ def polarplot(
                 used_colors.append(color)
                 rad = V_SRF.calc(ti, thetass, 0.0, 0.0, param_dict=params)
                 if aprox is True:
-                    radapprox = phasefunktapprox(
-                        ti, thetass, 0.0, 0.0, **params
+                    radapprox = np.array(
+                        phasefunktapprox(ti, thetass, 0.0, 0.0, **params)
                     ).squeeze()
                 # set theta direction to clockwise
                 ax.set_theta_direction(-1)
@@ -311,7 +311,7 @@ def hemreflect(
         try:
             Nsymb = R.NormBRDF.free_symbols
             Nfunc = _lambdify(list(Nsymb), [R.NormBRDF])
-            NormBRDF = Nfunc(*[param_dict[str(i)] for i in Nsymb]).squeeze()
+            NormBRDF = np.array(Nfunc(*[param_dict[str(i)] for i in Nsymb])).squeeze()
         except Exception:
             NormBRDF = R.NormBRDF
     elif SRF is not None:
