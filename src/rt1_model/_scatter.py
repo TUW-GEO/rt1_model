@@ -157,7 +157,7 @@ class _Scatter:
             from .surface import SurfaceScatter
 
             # quick way for visualizing the functions as polarplot
-            self.polarplot = partial(polarplot, X=self)
+            self.polarplot = partial(polarplot, V_SRF=self)
             update_wrapper(self.polarplot, polarplot)
 
             if isinstance(self, SurfaceScatter):
