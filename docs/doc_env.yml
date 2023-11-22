@@ -3,11 +3,11 @@ channels:
   - conda-forge
 
 dependencies:
-  - docutils
-  - sphinx
-  - sphinx-copybutton
-  - matplotlib-base
-  - myst-nb
-  - ipympl
-  - sphinx_rtd_theme
-  - sphinxcontrib-bibtex
+  - docutils=0.19
+  - sphinx=5.3
+  - sphinx-copybutton=0.5.2
+  - matplotlib-base=3.8.2
+  - myst-nb=1.0.0
+  - ipympl=0.9.3
+  - sphinx_rtd_theme=0.5.2
+  - sphinxcontrib-bibtex=2.5.0
