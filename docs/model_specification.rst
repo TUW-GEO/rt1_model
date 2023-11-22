@@ -135,8 +135,19 @@ The basic usage is as follows:
    V = volume.LinComb([(0.5, volume.Isotropic()), (0.5, volume.HenyeyGreenstein(t=0.4, ncoefs=10)])
    SRF = surface.LinComb([(0.5, surface.Isotropic()), (0.5, surface.HenyeyGreenstein(t=0.4, ncoefs=10)])
 
+The resulting volume-class element can now be used completely similar to the pre-defined scattering phase-functions.
 
 More details on how to create linear-combinations with the ``rt1_model`` package are provided in the :doc:`examples/linear_combinations` example.
+
+
+.. note::
+
+   Since one can combine functions with different choices for the generalized scattering angle (i.e. the :code:`a`-parameter),
+   and different numbers of expansion-coefficients (the :code:`ncoefs`-parameter) :code:`LinCombV()` will automatically combine
+   the associated Legendre-expansions based on the choices for :code:`a` and :code:`ncoefs`.
+
+   The attributes :code:`.a`, :code:`.scat_angle` and :code:`.ncoefs` of the resulting surface/volume object are therefore **NOT**
+   representative for the generated combined phase-function!
 
 
 Volume scattering functions
@@ -182,30 +193,6 @@ BRDF's :math:`w_n` denotes the associated weighting-factors, :math:`b_k^{(n)}` d
 
    In order to provide a simple tool that allows validating the above condition, the function :py:meth:`plot.hemreflect` numerically evaluates
    the hemispherical reflectance using a simple Simpson-rule integration-scheme and generates a plot that displays :math:`R(\theta_0,\phi_0)`.
-
-
-
-
-The resulting volume-class element can now be used completely similar to the pre-defined scattering phase-functions.
-
-
-.. note::
-
-   Since one can combine functions with different choices for the generalized scattering angle (i.e. the :code:`a`-parameter),
-   and different numbers of expansion-coefficients (the :code:`ncoefs`-parameter) :code:`LinCombV()` will automatically combine
-   the associated Legendre-expansions based on the choices for :code:`a` and :code:`ncoefs`.
-
-   The parameters :code:`V.a`, :code:`V.scat_angle()` and :code:`V.ncoefs` of the resulting volume-class element are therefore **NOT** representative for the generated combined phase-function!
-
-
-.. note::
-
-   Since one can combine functions with different choices for the generalized scattering angle (i.e. the :code:`a`-parameter),
-   and different numbers of expansion-coefficients (the :code:`ncoefs`-parameter) :code:`LinCombSRF()` will automatically combine
-   the associated Legendre-expansions based on the choices for :code:`a` and :code:`ncoefs`.
-
-   The parameters :code:`SRF.a`, :code:`SRF.scat_angle()` and :code:`SRF.ncoefs` of the resulting surface-class element are therefore **NOT** representative for the generated combined BRDF!
-
 
 
 .. note::
