@@ -4,9 +4,7 @@ Installation
 Installation from pip
 ~~~~~~~~~~~~~~~~~~~~~
 
-TODO
-
-The ``rt1_model`` package can (NOT YET) be installed with pip via:
+The ``rt1_model`` package can be installed with pip via:
 
 .. code-block:: console
 
