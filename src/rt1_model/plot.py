@@ -28,7 +28,7 @@ def polarplot(
     aprox=True,
     legend=True,
     legpos=(0.75, 0.5),
-    groundcolor="none",
+    groundcolor=".5",
     param_dict=None,
     ax=None,
 ):
@@ -99,6 +99,8 @@ def polarplot(
     if V_SRF is None:
         assert False, "Error: You must provide a volume- or surface object!"
 
+    use_colors = ["k", "r", "g", "b", "c", "m", "y"]
+
     if param_dict is None:
         param_dict = [{}]
     elif isinstance(param_dict, dict):
@@ -132,12 +134,6 @@ def polarplot(
 
         thetass = np.arange(-np.pi / 2.0, np.pi / 2.0, 0.01)
 
-        ax.fill(
-            np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01),
-            np.ones_like(np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01)) * 1 * 1.2,
-            color=groundcolor,
-        )
-
     if isinstance(V_SRF, VolumeScatter):
         if label is None:
             label = "Volume-Scattering Phase Function"
@@ -146,8 +142,7 @@ def polarplot(
 
         thetass = np.arange(0.0, 2.0 * np.pi, 0.01)
 
-    # plot of volume-scattering phase-function's
-    pmax = 0
+    # plot scattering distribution function
     for n_V_SRF, V_SRF in enumerate(np.atleast_1d(V_SRF)):
         for n_p, params in enumerate(param_dict):
             # define a plotfunction of the legendre-approximation of p
@@ -158,24 +153,8 @@ def polarplot(
 
             # set incidence-angles for which p is calculated
             plottis = np.deg2rad(inc)
-            colors = cycle(["k", "r", "g", "b", "c", "m", "y"])
+            colors = cycle(use_colors)
             used_colors = []
-            for i in plottis:
-                ts = np.arange(0.0, 2.0 * np.pi, 0.01)
-                pmax_i = multip * np.max(
-                    V_SRF.calc(
-                        np.full_like(ts, i),
-                        ts,
-                        0.0,
-                        0.0,
-                        param_dict=params,
-                    )
-                )
-                if pmax_i > pmax:
-                    pmax = pmax_i
-
-            if legend is True:
-                legend_lines = []
 
             # set color-counter to 0
             for ti in plottis:
@@ -194,18 +173,6 @@ def polarplot(
                 ax.plot(thetass, rad, color)
                 if aprox is True:
                     ax.plot(thetass, radapprox, color + "--")
-                ax.arrow(
-                    -ti,
-                    pmax * 1.2,
-                    0.0,
-                    -pmax * 0.8,
-                    head_width=0.0,
-                    head_length=0.0,
-                    fc=color,
-                    ec=color,
-                    lw=1,
-                    alpha=0.3,
-                )
 
                 ax.fill_between(thetass, rad, alpha=0.2, color=color)
                 ax.set_xticks(np.deg2rad([0, 45, 90, 125, 180]))
@@ -219,15 +186,38 @@ def polarplot(
                     ]
                 )
                 ax.set_yticklabels([])
-                ax.set_rmax(pmax * 1.2)
+                # ax.set_rmax(pmax * 1.2)
                 ax.set_title(label + "\n")
                 ax.set_rmin(0.0)
 
-    # add legend for covering layer phase-functions
-    used_colors = iter(used_colors)
-    if legend is True:
-        for ti in plottis:
-            color = next(used_colors)
+    max_radius = ax.get_rmax()
+    min_radius = ax.get_rmin()
+
+    if isinstance(V_SRF, SurfaceScatter) and groundcolor is not None:
+        x = np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01)
+        ax.fill(x, np.ones_like(x) * max_radius * 0.9, color=groundcolor)
+
+    legend_lines = []
+
+    # add arrows indicating incident directions
+    colors = iter(used_colors)
+    for ti in plottis:
+        color = next(colors)
+
+        ax.arrow(
+            -ti,
+            max_radius * 1.2,
+            0.0,
+            -max_radius * 0.8,
+            head_width=0.0,
+            head_length=0.0,
+            fc=color,
+            ec=color,
+            lw=1,
+            alpha=0.3,
+        )
+
+        if legend is True:
             legend_lines += [
                 mlines.Line2D(
                     [],
@@ -238,8 +228,9 @@ def polarplot(
                     + r"${}^\circ$",
                 )
             ]
-            i = i + 1
 
+    # add legend for covering layer phase-functions
+    if legend is True:
         if aprox is True:
             legend_lines += [
                 mlines.Line2D([], [], color="k", linestyle="--", label="approx.")
@@ -248,6 +239,8 @@ def polarplot(
         legend = ax.legend(bbox_to_anchor=legpos, loc=2, handles=legend_lines)
         legend.get_frame().set_facecolor("w")
         legend.get_frame().set_alpha(0.5)
+
+    ax.set_rlim(min_radius, max_radius)
 
 
 def hemreflect(
