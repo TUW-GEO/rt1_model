@@ -1,7 +1,7 @@
 RT1 model documentation
 -----------------------
 
-Welcome to the documentation for the **RT1 python module**!
+Welcome to the documentation for the **RT1 python package**!
 
 
 The ``rt1_model`` package is a ``python`` implementation for the RT1 bistatic (first order) scattering radiative transfer model as described in :cite:t:`Quast2016` :cite:t:`Quast2019`.

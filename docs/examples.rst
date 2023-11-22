@@ -9,6 +9,8 @@ Basics
 
    examples/analyzemodel.ipynb
    examples/example_fn.ipynb
+   examples/linear_combinations.ipynb
+
 
 Parameter Retrieval
 ...................
