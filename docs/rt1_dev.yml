@@ -20,9 +20,12 @@ dependencies:
   - nbformat
   - cloudpickle
 
+  # ---------- to run jupyter notebooks
+  - jupyterlab
+  - ipympl
+
   # ---------- for building the docs
   - myst-nb
-  - ipympl
   - docutils
   - sphinx
   - sphinx-copybutton
