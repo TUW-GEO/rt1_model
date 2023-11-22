@@ -8,3 +8,7 @@ docs/examples/.ipynb_checkpoints/*
 docs/examples/.virtual_documents/*
 .virtual_documents/*
 docs/jupyter_execute/*
+docs/.jupyter-cache/*
+*.bak
+*.sav.tmp
+dist/*

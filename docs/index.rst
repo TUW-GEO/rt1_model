@@ -4,56 +4,52 @@ RT1 model documentation
 Welcome to the documentation for the **RT1 python module**!
 
 
-The `RT1` package implements a bistatic first order scattering radiative transfer model that might be used for generic purposes.
-
-Unique features of this model are:
-
-- Analytical solution of the radiative transfer equation up to first order with flexible BRDF and volume phase function specifications.
-- Analytical solution for the jacobian with respect to arbitrary model parameters.
-- ...
-- **TODO: write a nice intro**
+The ``rt1_model`` package is a ``python`` implementation for the RT1 bistatic (first order) scattering radiative transfer model as described in :cite:t:`Quast2016` :cite:t:`Quast2019`.
+that can be used to simulate the scattered radiation from a rough surface covered by a tenuous distribution of particulate media.
 
 
-Credits and References
-----------------------
+RT1 hereby provies a flexible framework to parameterize the scattering properties of the surface and volume layer via bistatic distribution functions.
 
-`RT1` is provided as open-source software, hoping that it will help you in your research.
-The developers would very much appreciate to receive feedback how the model is used. Also contributions and suggestions for further improvements are highly welcome.
+The ``rt1_model`` package provides the following core features:
 
-
-Please read the LICENSE agreement related to this software which gives you much flexibility to (re)use the code. Currently we use the APACHE-2.0 license.
-
-
-When you are using `RT1` as part of your publications, please give the developers credit by giving reference to the GitHub repository and to the following papers:
+- An object-oriented interface to easily setup, evaluate and analyze RT1 model specifications.
+- An (extensible) set of volume- and surface scattering distribution functions and capabilities to use arbitrary linear combinations thereof.
+- Fast numeric evaluation of the model up to first order (e.g. double-bounce) contributions.
+- Capabilities to evaluate the Jacobian with respect to arbitrary model parameters (for model parameter optimization).
 
 
-.. raw:: html
 
-   <ul>
-   <li>
-   <a href=https://opg.optica.org/ao/viewmedia.cfm?uri=ao-55-20-5379&html=true>
-   R.Quast and W.Wagner, <i>Analytical solution for first-order scattering in bistatic radiative transfer interaction problems of layered media</i>, Applied Optics (2016), doi:10.1364/AO.55.005379
-   </a>
-   </li>
-   <li>
-   <a href=https://www.mdpi.com/2072-4292/11/3/285>
-   R.Quast, C.Albergel, J.C.Calvet, W.Wagner, <i>A Generic First-Order Radiative Transfer Modelling Approach for the Inversion of Soil and Vegetation Parameters from Scatterometer Observations</i>, Remote Sensing (2019),  doi:10.3390/rs11030285
-   </a>
-   </li>
-   </ul>
+.. figure:: _static/model.png
+   :align: center
+   :width: 50%
+   :alt: RT1 model overview
+
+   Illustration of the scattering contributions considered in the RT1 model (from :cite:p:`Quast2023`)
 
 
-Additional information on how to use the RT1 model for soil-moisture retrievals can be found in:
+.. note::
+
+   `RT1` is provided as open-source software, hoping that it will help you in your research.
+   The developers would very much appreciate to receive feedback how the model is used. Also contributions and suggestions for further improvements are highly welcome.
+
+
+   Please read the `LICENSE <https://github.com/TUW-GEO/rt1_model/blob/master/LICENSE>`_ agreement related to this software which gives you much flexibility to (re)use the code. Currently we use the APACHE-2.0 license.
+
+
+   When you are using `RT1` as part of your publications, please give the developers credit by giving reference to the `GitHub repository <https://github.com/TUW-GEO/rt1_model>`_ and to the papers :cite:t:`Quast2016`,  :cite:t:`Quast2019`:
+
+
+   Additional information on how to use the RT1 model for soil-moisture retrievals can be found in :cite:t:`Quast2023`:
+
+
 
 .. raw:: html
 
-   <ul>
-   <li>
-   <a href=https://www.sciencedirect.com/science/article/pii/S003442572300202X>
-   R.Quast, W.Wagner, B.Bauer-Marschallinger, M.Vreugdenhil: Soil moisture retrieval from Sentinel-1 using a first-order radiative transfer model—A case-study over the Po-Valley, Remote Sensing of Environment (2023), doi: 10.1016/j.rse.2023.113651
-   </a>
-   </li>
-   </ul>
+   <hr>
+
+
+.. bibliography::
+   :filter: docname in docnames
 
 
 .. toctree::

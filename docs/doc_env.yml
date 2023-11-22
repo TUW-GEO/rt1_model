@@ -9,6 +9,5 @@ dependencies:
   - matplotlib-base
   - myst-nb
   - ipympl
-  - pip
-  - pip:
-    - sphinx_rtd_theme
+  - sphinx_rtd_theme
+  - sphinxcontrib-bibtex

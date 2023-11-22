@@ -1,0 +1,31 @@
+name: rt1_dev
+channels:
+  - conda-forge
+  - symengine
+
+dependencies:
+  # ---------- required dependencies
+  - numpy
+  - sympy
+  - scipy
+  - numpydoc
+
+  # ---------- optional dependencies
+  - matplotlib >=3.8
+  - python-symengine
+
+  # ---------- for testing
+  - pytest
+  - pytest-cov
+  - nbformat
+  - cloudpickle
+
+  # ---------- for building the docs
+  - myst-nb
+  - ipympl
+  - docutils
+  - sphinx
+  - sphinx-copybutton
+  - sphinx-autobuild
+  - sphinx_rtd_theme
+  - sphinxcontrib-bibtex
