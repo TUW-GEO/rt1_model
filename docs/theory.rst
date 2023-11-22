@@ -4,7 +4,7 @@ Theory
 The RT1 module provides a method for calculating the scattered radiation from a
 uniformly illuminated rough surface covered by a homogeneous layer of tenuous media.
 The following sections are intended to give a general overview of the underlying theory of the
-RT1 module. A more general discussion on the derivation of the used results can be found in [QuWa16]_.
+RT1 module. A more general discussion on the derivation of the used results can be found in :cite:t:`.-Quast2016`.
 Details on how to define the scattering properties of the covering layer and the ground surface
 within the RT1-module are given in :ref:`cha_model_specification`.
 
@@ -29,7 +29,7 @@ The individual variables are hereby defined as follows:
 - :math:`\hat{p}(\theta,\phi,\theta',\phi')` denotes the scattering phase-function of the constituents of the covering layer
 
 .. note::
-	To remain consistent with [QuWa16]_, the arguments of the functions :math:`\hat{p}(\theta,\phi,\theta',\phi')` and :math:`BRDF(\theta,\phi,\theta',\phi')` are defined as angles
+	To remain consistent with :cite:p:`.-Quast2016`, the arguments of the functions :math:`\hat{p}(\theta,\phi,\theta',\phi')` and :math:`BRDF(\theta,\phi,\theta',\phi')` are defined as angles
 	with respect to a spherical coordinate system in the following discussion. Within the RT1-module however, the functions are defined with respect to the associated zenith-angles!
 
 	A relationship between the module-functions and the functions within the subsequent discussion is therefore given by:
@@ -50,7 +50,7 @@ Problem Geometry and Boundary Conditions
    :alt: geometry applied to the RT1 module
    :figwidth: 100%
 
-   Illustration of the chosen geometry within the RT1-module (adapted from [QuWa16]_)
+   Illustration of the chosen geometry within the RT1-module (adapted from :cite:p:`.-Quast2016`)
 
 
 
@@ -129,7 +129,7 @@ where the individual terms (representing the contributions to the scattered inte
 - :math:`I_{svs}`: radiation scattered twice by the ground surface and once within the covering layer
       (This contribution is assumed to be negligible due to the occurrence of second order surface-scattering)
 
-After some algebraic manipulations the individual contributions are found to be given by (details can be found in [QuWa16]_):
+After some algebraic manipulations the individual contributions are found to be given by (details can be found in :cite:p:`.-Quast2016`):
 
 .. math::
    I_{\textrm{surface}}(\theta_0, \phi_0, \theta_{ex}, \phi_{ex}) = I_0 e^{-\frac{\tau}{\cos(\theta_0)}} ~ e^{-\frac{\tau}{\cos(\theta_{ex})}} \cos(\theta_0) BRDF(\pi-\theta_0, \phi_0, \theta_{ex}, \phi_{ex})
@@ -174,7 +174,7 @@ where :math:`\theta ,\phi` are the polar- and azimuth-angles of the incident rad
 are constants that allow consideration of off-specular and anisotropic effects within the approximations.
 
 
-Once the :math:`b_n` and :math:`p_n` coefficients are known, the method developed in [QuWa16]_ is used to analytically solve :math:`I_{\textrm{interaction}}`.
+Once the :math:`b_n` and :math:`p_n` coefficients are known, the method developed in :cite:p:`.-Quast2016` is used to analytically solve :math:`I_{\textrm{interaction}}`.
 
 This is done in two steps:
 
@@ -184,7 +184,7 @@ First, the so-called fn-coefficients are evaluated which are defined via:
    \int_{0}^{2\pi} \hat{p}(\theta_0,\phi_0,\theta,\phi)BRDF(\pi - \theta, \phi, \theta_{ex},\phi_{ex}) d\phi  = \sum_{n=0}^{N_b + N_p} f_n(\theta_0,\phi_0,\theta_{ex},\phi_{ex}) \cos(\theta)^n
    :label: fn_coef_definition
 
-Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solution to the remaining :math:`\theta`-integral for a given set of fn-coefficients as presented in [QuWa16]_.
+Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solution to the remaining :math:`\theta`-integral for a given set of fn-coefficients as presented in :cite:p:`.-Quast2016`.
 
 .. admonition:: Example
 
@@ -219,5 +219,7 @@ Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solutio
      An IPython-notebook that uses the RT1-module to evaluate the above fn-coefficients can be found `HERE <https://github.com/pygeo/rt1/tree/master/doc/examples/example_fn.ipynb>`_
 
 
-.. rubric:: References
-.. [QuWa16]  R.Quast and W.Wagner, "Analytical solution for first-order scattering in bistatic radiative transfer interaction problems of layered media," Appl.Opt.55, 5379-5386 (2016)
+.. bibliography::
+   :filter: docname in docnames
+   :keyprefix: .-
+   :labelprefix: .

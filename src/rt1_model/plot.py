@@ -13,78 +13,80 @@ from matplotlib.widgets import Slider, RadioButtons
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 from . import _log
+from ._calc import _lambdify
 from .volume import VolumeScatter
 from .surface import SurfaceScatter
 
+from functools import wraps
+
 
 def polarplot(
-    X=None,
+    V_SRF=None,
     inc=[15.0, 35.0, 55.0, 75.0],
     multip=2.0,
     label=None,
     aprox=True,
     legend=True,
     legpos=(0.75, 0.5),
-    groundcolor="none",
-    param_dict=[{}],
-    polarax=None,
+    groundcolor=".5",
+    param_dict=None,
+    ax=None,
 ):
     """
-    Generate polar-plots of the volume- and the surface scattering phase functions.
+    Convenience function to generate polar-plots of scattering distribution functions.
 
     (and also the used approximations in terms of legendre-polynomials)
+
+    Note
+    ----
+    You can call this function directly from a given :py:mod:`volume`,
+    :py:mod:`surface` object by using
+
+    ``V.polarplot(...)`` or ``SRF.polarplot()``
 
 
     Parameters
     ----------
-    SRF : RT1.surface class object
-          Alternative direct specification of the surface BRDF,
-          e.g. SRF = CosineLobe(i=3, ncoefs=5)
-    V : RT1.volume class object
-        Alternative direct specification of the volume-scattering
-        phase-function  e.g. V = Rayleigh()
+    V_SRF : SurfaceScatter or VolumeScatter object or tuple
+        The surface- or volume scattering distribution to visualize.
 
     Other Parameters
     ----------------
     inc : list of floats (default = [15.,35.,55.,75.])
-           Incidence-angles in degree at which the volume-scattering
-           phase-function will be plotted
+        Incidence-angles in degree at which the volume-scattering
+        phase-function will be plotted
     multip : float (default = 2.)
-              Multiplicator to scale the plotrange for the plot of the
-              volume-scattering phase-function
-              (the max-plotrange is given by the max. value of V in
-              forward-direction (for the chosen incp) )
+        Multiplicator to scale the plotrange for the plot of the
+        volume-scattering phase-function
+        (the max-plotrange is given by the max. value of V in
+        forward-direction (for the chosen incp) )
     label : string
-             Manual label for the volume-scattering phase-function plot
+        Manual label for the volume-scattering phase-function plot
     aprox : boolean (default = True)
-             Indicator if the approximation of the phase-function in terms
-             of Legendre-polynomials will be plotted.
+        Indicator if the approximation of the phase-function in terms
+        of Legendre-polynomials will be plotted.
     legend : boolean (default = True)
-             Indicator if a legend should be shown that indicates the
-             meaning of the different colors for the phase-function
-    legpos : (float,float) (default = (0.75,0.5))
-             Positioning of the legend for the V-plot (controlled via
-             the matplotlib.legend keyword  bbox_to_anchor = plegpos )
+        Indicator if a legend should be shown that indicates the
+        meaning of the different colors for the phase-function
+    legpos : (float, float) (default = (0.75, 0.5))
+        Positioning of the legend for the V-plot (controlled via
+        the matplotlib.legend keyword  bbox_to_anchor = plegpos )
     groundcolor : string (default = "none")
-             Matplotlib color-indicator to change the color of the lower
-             hemisphere in the BRDF-plot possible values are:
-             ('r', 'g' , 'b' , 'c' , 'm' , 'y' , 'k' , 'w' , 'none')
-    polarax: matplotlib.axes
-             the axes to use... it must be a polar-axes, e.g.:
+        Matplotlib color-indicator to change the color of the lower
+        hemisphere in the BRDF-plot possible values are:
+        ('r', 'g' , 'b' , 'c' , 'm' , 'y' , 'k' , 'w' , 'none')
+    ax: matplotlib.axes
 
-                 >>> polarax = fig.add_subplot(111, projection='polar')
+        Use provided axes for the plot instead of creating a new figure.
+        The axes must be a polar-axes, e.g.:
+
+             >>> ax = fig.add_subplot(111, projection='polar')
 
     param_dict : dict (or list of dicts)
-                 a dictionary containing the names and values of the symbolic
-                 parameters required to fully specify the V/SRF functions.
-                 if a list of dicts is provided, the specifications are
-                 plotted on top of each other.
-
-    Returns
-    -------
-    polarfig : figure
-               a matplotlib figure showing a polar-plot of the functions
-               specified by V or SRF
+        a dictionary containing the names and values of the symbolic
+        parameters required to fully specify the V/SRF functions.
+        if a list of dicts is provided, the specifications are
+        plotted on top of each other.
 
     """
     assert isinstance(inc, list), (
@@ -94,14 +96,18 @@ def polarplot(
         "Error: plotrange-multiplier " + "for polarplot must be a floating-point number"
     )
 
-    if X is None:
+    if V_SRF is None:
         assert False, "Error: You must provide a volume- or surface object!"
 
-    if isinstance(param_dict, dict):
+    use_colors = ["k", "r", "g", "b", "c", "m", "y"]
+
+    if param_dict is None:
+        param_dict = [{}]
+    elif isinstance(param_dict, dict):
         param_dict = [param_dict]
 
     # Check if all required parameters have been provided in the param_dict
-    required_symbs = set(map(str, X._func.free_symbols)) - {
+    required_symbs = set(map(str, V_SRF._func.free_symbols)) - {
         "phi_0",
         "phi_ex",
         "theta_0",
@@ -114,26 +120,21 @@ def polarplot(
             f"variables {missing} in the `param_dict`!"
         )
 
-    if polarax is None:
+    if ax is None:
         fig = plt.figure(figsize=(7, 7))
-        polarax = fig.add_subplot(111, projection="polar")
+        ax = fig.add_subplot(111, projection="polar")
     else:
-        assert polarax.name == "polar", "you must provide a polar-axes!"
+        fig = ax.figure
+        assert ax.name == "polar", "You must provide axes in polar-projection!"
 
-    if isinstance(X, SurfaceScatter):
+    if isinstance(V_SRF, SurfaceScatter):
         if label is None:
             label = "Surface-Scattering Phase Function"
         angs = ["theta_ex", "theta_s", "phi_ex", "phi_s"]
 
         thetass = np.arange(-np.pi / 2.0, np.pi / 2.0, 0.01)
 
-        polarax.fill(
-            np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01),
-            np.ones_like(np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01)) * 1 * 1.2,
-            color=groundcolor,
-        )
-
-    if isinstance(X, VolumeScatter):
+    if isinstance(V_SRF, VolumeScatter):
         if label is None:
             label = "Volume-Scattering Phase Function"
 
@@ -141,70 +142,41 @@ def polarplot(
 
         thetass = np.arange(0.0, 2.0 * np.pi, 0.01)
 
-    # plot of volume-scattering phase-function's
-    pmax = 0
-    for n_X, X in enumerate(np.atleast_1d(X)):
+    # plot scattering distribution function
+    for n_V_SRF, V_SRF in enumerate(np.atleast_1d(V_SRF)):
         for n_p, params in enumerate(param_dict):
             # define a plotfunction of the legendre-approximation of p
             if aprox is True:
-                phasefunktapprox = sp.lambdify(
-                    (*angs, *params.keys()),
-                    X.legexpansion(*angs).doit(),
-                    modules=["numpy", "sympy"],
+                phasefunktapprox = _lambdify(
+                    [*angs, *params.keys()], [V_SRF.legexpansion(*angs).doit()]
                 )
 
             # set incidence-angles for which p is calculated
             plottis = np.deg2rad(inc)
-            colors = cycle(["k", "r", "g", "b", "c", "m", "y"])
+            colors = cycle(use_colors)
             used_colors = []
-            for i in plottis:
-                ts = np.arange(0.0, 2.0 * np.pi, 0.01)
-                pmax_i = multip * np.max(
-                    X.calc(
-                        np.full_like(ts, i),
-                        ts,
-                        0.0,
-                        0.0,
-                        param_dict=params,
-                    )
-                )
-                if pmax_i > pmax:
-                    pmax = pmax_i
-
-            if legend is True:
-                legend_lines = []
 
             # set color-counter to 0
             for ti in plottis:
                 color = next(colors)
                 used_colors.append(color)
-                rad = X.calc(ti, thetass, 0.0, 0.0, param_dict=params)
+                rad = V_SRF.calc(ti, thetass, 0.0, 0.0, param_dict=params)
                 if aprox is True:
-                    radapprox = phasefunktapprox(ti, thetass, 0.0, 0.0, **params)
+                    radapprox = np.array(
+                        phasefunktapprox(ti, thetass, 0.0, 0.0, **params)
+                    ).squeeze()
                 # set theta direction to clockwise
-                polarax.set_theta_direction(-1)
+                ax.set_theta_direction(-1)
                 # set theta to start at z-axis
-                polarax.set_theta_offset(np.pi / 2.0)
+                ax.set_theta_offset(np.pi / 2.0)
 
-                polarax.plot(thetass, rad, color)
+                ax.plot(thetass, rad, color)
                 if aprox is True:
-                    polarax.plot(thetass, radapprox, color + "--")
-                polarax.arrow(
-                    -ti,
-                    pmax * 1.2,
-                    0.0,
-                    -pmax * 0.8,
-                    head_width=0.0,
-                    head_length=0.0,
-                    fc=color,
-                    ec=color,
-                    lw=1,
-                    alpha=0.3,
-                )
+                    ax.plot(thetass, radapprox, color + "--")
 
-                polarax.fill_between(thetass, rad, alpha=0.2, color=color)
-                polarax.set_xticks(np.deg2rad([0, 45, 90, 125, 180]))
-                polarax.set_xticklabels(
+                ax.fill_between(thetass, rad, alpha=0.2, color=color)
+                ax.set_xticks(np.deg2rad([0, 45, 90, 125, 180]))
+                ax.set_xticklabels(
                     [
                         r"$0^\circ$",
                         r"$45^\circ$",
@@ -213,16 +185,39 @@ def polarplot(
                         r"$180^\circ$",
                     ]
                 )
-                polarax.set_yticklabels([])
-                polarax.set_rmax(pmax * 1.2)
-                polarax.set_title(label + "\n")
-                polarax.set_rmin(0.0)
+                ax.set_yticklabels([])
+                # ax.set_rmax(pmax * 1.2)
+                ax.set_title(label + "\n")
+                ax.set_rmin(0.0)
 
-    # add legend for covering layer phase-functions
-    used_colors = iter(used_colors)
-    if legend is True:
-        for ti in plottis:
-            color = next(used_colors)
+    max_radius = ax.get_rmax()
+    min_radius = ax.get_rmin()
+
+    if isinstance(V_SRF, SurfaceScatter) and groundcolor is not None:
+        x = np.arange(np.pi / 2.0, 3.0 * np.pi / 2.0, 0.01)
+        ax.fill(x, np.ones_like(x) * max_radius * 0.9, color=groundcolor)
+
+    legend_lines = []
+
+    # add arrows indicating incident directions
+    colors = iter(used_colors)
+    for ti in plottis:
+        color = next(colors)
+
+        ax.arrow(
+            -ti,
+            max_radius * 1.2,
+            0.0,
+            -max_radius * 0.8,
+            head_width=0.0,
+            head_length=0.0,
+            fc=color,
+            ec=color,
+            lw=1,
+            alpha=0.3,
+        )
+
+        if legend is True:
             legend_lines += [
                 mlines.Line2D(
                     [],
@@ -233,16 +228,19 @@ def polarplot(
                     + r"${}^\circ$",
                 )
             ]
-            i = i + 1
 
+    # add legend for covering layer phase-functions
+    if legend is True:
         if aprox is True:
             legend_lines += [
                 mlines.Line2D([], [], color="k", linestyle="--", label="approx.")
             ]
 
-        legend = polarax.legend(bbox_to_anchor=legpos, loc=2, handles=legend_lines)
+        legend = ax.legend(bbox_to_anchor=legpos, loc=2, handles=legend_lines)
         legend.get_frame().set_facecolor("w")
         legend.get_frame().set_alpha(0.5)
+
+    ax.set_rlim(min_radius, max_radius)
 
 
 def hemreflect(
@@ -312,8 +310,8 @@ def hemreflect(
 
         try:
             Nsymb = R.NormBRDF.free_symbols
-            Nfunc = sp.lambdify(Nsymb, R.NormBRDF, modules=["numpy"])
-            NormBRDF = Nfunc(*[param_dict[str(i)] for i in Nsymb])
+            Nfunc = _lambdify(list(Nsymb), [R.NormBRDF])
+            NormBRDF = np.array(Nfunc(*[param_dict[str(i)] for i in Nsymb])).squeeze()
         except Exception:
             NormBRDF = R.NormBRDF
     elif SRF is not None:

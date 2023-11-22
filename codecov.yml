@@ -1,0 +1,4 @@
+ignore:
+  # ignore docscrape.py for coverage (it is inherited from numpydocs)
+  # and does not interfere with the functionality (only with docstrings)
+  - "src/rt1_model/_numpydoc_docscrape.py"

@@ -5,11 +5,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["rt1_model"]
-exclude = ["tests"]
 
 [project]
 name = "rt1_model"
-version = "3.0"
+version = "0.1"
 description = "Implementation of the RT1 first order radiative transfer model."
 requires-python = ">=3.6"
 
@@ -25,13 +24,12 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-dependencies = ["numpy", "scipy", "sympy", "numpydoc"]
+dependencies = ["numpy", "scipy", "sympy"]
 
 [project.optional-dependencies]
 full = ["symengine", "matplotlib"]
-symengine = ["symengine", "matplotlib"]
-
+symengine = ["symengine"]
 
 [project.urls]
-Documentation = "https://github.com/TUW-GEO/rt1"
+Documentation = "https://rt1-model.readthedocs.io"
 Repository = "https://github.com/TUW-GEO/rt1"
