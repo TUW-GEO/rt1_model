@@ -3,9 +3,7 @@
 from itertools import cycle
 
 import numpy as np
-import sympy as sp
 
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from matplotlib.collections import LineCollection
@@ -13,11 +11,9 @@ from matplotlib.widgets import Slider, RadioButtons
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 from . import _log
-from ._calc import _lambdify
+from .helpers import _lambdify
 from .volume import VolumeScatter
 from .surface import SurfaceScatter
-
-from functools import wraps
 
 
 def polarplot(
@@ -33,7 +29,7 @@ def polarplot(
     ax=None,
 ):
     """
-    Convenience function to generate polar-plots of scattering distribution functions.
+    A convenience function to generate polar-plots of scattering distribution functions.
 
     (and also the used approximations in terms of legendre-polynomials)
 
@@ -415,38 +411,40 @@ def _check_params(R, param_dict, additional_params=[]):
 
 
 class Analyze:
-    """
-    Create a widget to analyze a given RT1 model specification.
-
-    Parameters
-    ----------
-    R : RT1 object
-        The RT1 object to analyze.
-    param_dict : dict
-        A dictionary containing the value-range for all dynamic parameters of the model.
-
-        The dict must have the following form:
-
-        >>> {"parameter_name": [min, max, (start),
-        >>> ...
-        >>> }
-
-        - `min`, `max` : The min-max values of the parameter-range
-        - `start` : The start-value to use (optional, if ommitted, center is used)
-
-        For example:
-
-        >>> {"omega": [0, .5, .2, "Omega"],
-        >>>  "tau": [0, .25, .1, "Optical Depth"]}
-
-    range_parameter : str, optional
-        If provided, the range of resulting values for the given parameter
-        is overlaid on the plot (can be any parameter provided in `param_dict`).
-        The default is None.
-
-    """
+    """A widget to analyze a given (monostatic) RT1 model specification."""
 
     def __init__(self, R, param_dict=None, range_parameter=None):
+        """
+        A widget to analyze a given (monostatic) RT1 model specification.
+
+        Parameters
+        ----------
+        R : RT1 object
+            The RT1 object to analyze.
+        param_dict : dict
+            A dictionary containing the value-range for all dynamic parameters of the model.
+
+            The dict must have the following form:
+
+            >>> {"parameter_name": [min, max, (start),
+            >>> ...
+            >>> }
+
+            - `min`, `max` : The min-max values of the parameter-range
+            - `start` : The start-value to use (optional, if ommitted, center is used)
+
+            For example:
+
+            >>> {"omega": [0, .5, .2, "Omega"],
+            >>>  "tau": [0, .25, .1, "Optical Depth"]}
+
+        range_parameter : str, optional
+            If provided, the range of resulting values for the given parameter
+            is overlaid on the plot (can be any parameter provided in `param_dict`).
+            The default is None.
+
+        """
+
         self._t0 = np.linspace(10, 80, 100)
         self._range_parameter = range_parameter
 
@@ -630,6 +628,8 @@ class Analyze:
 
 
 class Analyze3D:
+    """A widget to analyze the 3D scattering distribution of a selected RT1 specification."""
+
     def __init__(self, R, param_dict=None, samples=35, contributions="ts"):
         """
         A widget to analyze the 3D scattering distribution of a selected RT1 specification.
@@ -668,7 +668,9 @@ class Analyze3D:
             Can be any combination of ["t", "s", "v", "i"]
             (for Total, Surface, Volume and Interaction term)
             The default is "ts"
+
         """
+
         self.R = R
 
         if self.R.dB is True:

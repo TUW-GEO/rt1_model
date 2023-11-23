@@ -8,17 +8,69 @@ from functools import lru_cache
 _log = _logging.getLogger(__name__)
 _log.setLevel(_logging.WARNING)
 
-from ._calc import RT1, set_lambda_backend
+try:
+    # if symengine is available, use it to perform series-expansions
+    import symengine
+
+    _init_lambda_backend = "symengine"
+
+except ImportError:
+    _init_lambda_backend = "sympy"
+
+_log.debug(f"Init lambda backend set to: {_init_lambda_backend}")
+
+
+def get_lambda_backend():
+    """Get the backend used to evaluate symbolic expressions."""
+    global _init_lambda_backend
+    return _init_lambda_backend
+
+
+def set_lambda_backend(lambda_backend):
+    """
+    Set the backend that will be used to evaluate symbolic expressions.
+
+    Parameters
+    ----------
+    lambda_backend : str (default = 'symengine' if possible, else 'sympy')
+        The backend that will be used to evaluate and compile functions for
+        numerical evaluation of symbolic expressions.
+
+        Possible values are:
+            - 'sympy' : sympy.lambdify is used to compile functions with numpy and scipy
+            - 'symengine' : symengine.LambdifyCSE is used to compile functions.
+              This results in considerable speedup for more complex model calculations!
+
+    """
+    global _init_lambda_backend
+    assert lambda_backend in [
+        "sympy",
+        "symengine",
+    ], f"Lambda backend {lambda_backend} is not defined!"
+    _init_lambda_backend = lambda_backend
+
+    _log.debug("Lambda backend set to {lambda_backend}")
+
+
+from ._calc import RT1
 from . import volume
 from . import surface
 
-
-__all__ = ["RT1", "volume", "surface", "plot", "set_lambda_backend"]
+__all__ = [
+    "RT1",
+    "volume",
+    "surface",
+    "plot",
+    "set_lambda_backend",
+    "get_lambda_backend",
+]
 
 
 @lru_cache()
 def _ensure_handler():
     """
+    Attach a StreamHandler to the logger the first time this function is executed.
+
     The first time this function is called, attach a `StreamHandler` using the
     same format as `logging.basicConfig` to the root logger.
 
