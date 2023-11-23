@@ -13,6 +13,9 @@ dependencies:
   - matplotlib >=3.8
   - python-symengine
 
+  # ---------- to run pre commits
+  - pre-commit
+
   # ---------- for testing
   - pytest
   - pytest-cov

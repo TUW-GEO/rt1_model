@@ -36,7 +36,34 @@ To do so, first clone the `GitHub repository <https://github.com/TUW-GEO/rt1_mod
    pip install -e .
 
 
+
 That's it! You're all set!
 
 Once you're done with coding, head over to `GitHub <https://github.com/TUW-GEO/rt1_model>`_, and open a new `Pull Request <https://github.com/TUW-GEO/rt1_model/pulls>`_
 to start discussions and get help!
+
+
+Code formatting
+~~~~~~~~~~~~~~~
+
+The ``rt1_model`` package uses the `black code-style <https://github.com/psf/black>`_  and `pre-commits <https://pre-commit.com/>`_ to ensure code-formatting for changes pushed to GitHub.
+
+To initialize pre-commits, execute the following command (again in the parent-directory containing the ``.pre-commit-config.yaml`` file.
+
+.. code-block:: console
+
+   pre-commit install
+
+Now pre-commit is run prior to pushing commits to GitHub and `black <https://github.com/psf/black>`_ code-formatting is
+applied to all staged files.
+
+You can also manually run pre-commit on all files by executing:
+
+.. code-block:: console
+
+   pre-commit run --all-files
+
+
+.. note::
+
+   You must stage all changes performed by the automatic re-formatting prior to pushing to GitHub!
