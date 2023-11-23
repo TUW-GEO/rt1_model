@@ -32,8 +32,8 @@ exclude_patterns = [
     "build",
     "examples/.*",
     "jupyter_execute/*",
-    ".jupyter_cache",
-    ".virtual_documents",
+    ".jupyter_cache/*",
+    ".virtual_documents/*",
 ]
 
 # autodoc_default_options = {
