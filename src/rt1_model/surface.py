@@ -1,5 +1,7 @@
 """Definition of surface scattering functions (BRDF)."""
 
+from functools import wraps
+
 import sympy as sp
 
 from ._scatter import _Scatter, _LinComb, _parse_sympy_param
@@ -55,8 +57,14 @@ class SurfaceScatter(_Scatter):
 
 
 class LinComb(_LinComb, SurfaceScatter):
+    """Class to create linear combinations of surface scattering distributions."""
+
+    @wraps(_LinComb.__init__)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+LinComb.__doc__ = _LinComb.__init__.__doc__
 
 
 @append_numpy_docstring(SurfaceScatter)

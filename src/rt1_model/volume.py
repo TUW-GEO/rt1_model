@@ -1,5 +1,7 @@
 """Definition of volume phase scattering functions."""
 
+from functools import wraps
+
 import sympy as sp
 
 from ._scatter import _Scatter, _LinComb, _parse_sympy_param
@@ -55,8 +57,14 @@ class VolumeScatter(_Scatter):
 
 
 class LinComb(_LinComb, VolumeScatter):
+    """Class to create linear combinations of volume scattering distributions."""
+
+    @wraps(_LinComb.__init__)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+LinComb.__doc__ = _LinComb.__init__.__doc__
 
 
 @append_numpy_docstring(VolumeScatter)
