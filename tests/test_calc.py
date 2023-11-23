@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import cloudpickle
-from rt1_model import RT1, surface, volume, set_lambda_backend
+from rt1_model import RT1, surface, volume, set_lambda_backend, get_lambda_backend
 
 
 def test_init():
@@ -116,3 +116,41 @@ def test_pickle(backend):
 
     load = cloudpickle.loads(dump)
     assert np.allclose(load.calc(), R.calc())
+
+
+@pytest.mark.parametrize("dB", [True, False], ids=["dB", "linear"])
+@pytest.mark.parametrize("sig0", [True, False], ids=["sig0", "intensity"])
+def test_sympy_symengine_equality(sig0, dB):
+    # create some random parameter arrays
+    n, n_incs = 100, 20
+
+    t_0 = np.tile(np.deg2rad(np.linspace(30, 75, n_incs)), (n, 1))
+    x = np.linspace(np.linspace(0.1, 0.2, n_incs), np.linspace(0.3, 0.4, n_incs), n)
+
+    SRF = surface.HenyeyGreenstein(t="x", ncoefs=3)
+    V = volume.HGRayleigh(t="x", ncoefs=3)
+
+    # evaluate result with sympy
+    set_lambda_backend("sympy")
+    assert get_lambda_backend() == "sympy", "Backend was not correctly set"
+
+    R_sympy = RT1(V=V, SRF=SRF, sig0=sig0, dB=dB)
+    R_sympy.omega = "x"
+    R_sympy.NormBRDF = "x"
+    R_sympy.tau = "x"
+
+    R_sympy.set_geometry(t_0=t_0, p_0=0.2, geometry="mono")
+    R_sympy.omega, R_sympy.NormBRDF, R_sympy.tau = "x", "x", "x"
+    sympy_res = R_sympy.calc(x=x)
+
+    # evaluate result with symengine
+    set_lambda_backend("symengine")
+    assert get_lambda_backend() == "symengine", "Backend was not correctly set"
+
+    R_seng = RT1(V=V, SRF=SRF, sig0=sig0, dB=dB)
+    R_seng.omega, R_seng.NormBRDF, R_seng.tau = "x", "x", "x"
+
+    R_seng.set_geometry(t_0=t_0, p_0=0.2, geometry="mono")
+    seng_res = R_seng.calc(x=x)
+
+    assert np.allclose(sympy_res, seng_res)
