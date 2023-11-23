@@ -84,6 +84,7 @@ def _lambdify(variables, functions):
             funcs,
             modules=["numpy", "sympy"],
             dummify=False,
+            cse=True,
         )
     else:
         raise TypeError(f"lambda_backend {backend} is not available")

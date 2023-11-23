@@ -24,12 +24,12 @@ try:
     from .plot import Analyze, Analyze3D
 
     _register_plotfuncs = True
-except Exception as ex:
+except Exception:
     _log.debug("Unable to register plot-functions", exc_info=True)
     _register_plotfuncs = False
 
 if get_lambda_backend() == "symengine":
-    # if symengine is available, use it to perform series-expansions
+    # use symengine to perform series-expansions
     from symengine import expand as seng_expand
 
 

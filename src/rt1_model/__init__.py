@@ -49,7 +49,7 @@ def set_lambda_backend(lambda_backend):
     ], f"Lambda backend {lambda_backend} is not defined!"
     _init_lambda_backend = lambda_backend
 
-    _log.debug("Lambda backend set to {lambda_backend}")
+    _log.debug(f"Lambda backend set to {lambda_backend}")
 
 
 from ._calc import RT1
