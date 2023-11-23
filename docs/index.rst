@@ -27,16 +27,22 @@ The ``rt1_model`` package provides the following core features:
    Illustration of the scattering contributions considered in the RT1 model (from :cite:p:`Quast2023`)
 
 
+
+
 .. note::
+
+   .. |doi_img| image:: https://zenodo.org/badge/709842988.svg
+      :target: https://zenodo.org/doi/10.5281/zenodo.10198659
 
    `RT1` is provided as open-source software, hoping that it will help you in your research.
    The developers would very much appreciate to receive feedback how the model is used. Also contributions and suggestions for further improvements are highly welcome.
 
 
-   Please read the `LICENSE <https://github.com/TUW-GEO/rt1_model/blob/master/LICENSE>`_ agreement related to this software which gives you much flexibility to (re)use the code. Currently we use the APACHE-2.0 license.
+   Please read the `LICENSE <https://github.com/TUW-GEO/rt1_model/blob/master/LICENSE>`_ agreement related to this software which gives you much flexibility to (re)use the code. Currently we use the **APACHE-2.0** license.
 
 
-   When you are using `RT1` as part of your publications, please give the developers credit by giving reference to the `GitHub repository <https://github.com/TUW-GEO/rt1_model>`_ and to the papers :cite:t:`Quast2016`,  :cite:t:`Quast2019`:
+   When you are using `RT1` as part of your publications, please give the developers credit by adding a citation for the source-code
+   |doi_img| and to the papers :cite:t:`Quast2016`,  :cite:t:`Quast2019`:
 
 
    Additional information on how to use the RT1 model for soil-moisture retrievals can be found in :cite:t:`Quast2023`:

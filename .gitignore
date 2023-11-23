@@ -6,6 +6,7 @@ docs/build/*
 docs/generated/*
 docs/examples/.ipynb_checkpoints/*
 docs/examples/.virtual_documents/*
+docs/.virtual_documents/*
 .virtual_documents/*
 docs/jupyter_execute/*
 docs/.jupyter_cache/*
@@ -14,3 +15,4 @@ docs/.jupyter_cache/*
 dist/*
 _exclude/*
 _additional_resources/*
+docs/_static/_source_files/*

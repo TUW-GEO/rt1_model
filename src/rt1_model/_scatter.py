@@ -3,9 +3,8 @@
 from functools import lru_cache, wraps, partial, update_wrapper
 
 import sympy as sp
-import numpy as np
 from . import _log
-from ._calc import _lambdify, _parse_sympy_param
+from .helpers import _lambdify, _parse_sympy_param
 
 
 class _Scatter:
@@ -170,44 +169,41 @@ class _Scatter:
 
 
 class _LinComb(_Scatter):
-    """
-    Class to generate linear-combinations of scattering distribution functions.
-
-    For details please look at the documentation
-    (http://rt1.readthedocs.io/en/latest/model_specification.html#linear-combination-of-scattering-distributions)
-
-    Parameters
-    ----------
-    choices : [ (float, ScatterObject) , (float, ScatterObject) ,  ...]
-        A list that contains the the individual scattering functions
-        and the associated weighting-factors for the linear-combination.
-
-        The weights can be either numerical values or strings
-        (which will be parsed as sympy expressions)
-
-    Examples
-    --------
-
-    Defining linear-combinations of volume- or surface scattering distributions
-    works completely similar:
-
-    >>> from rt1_model import volume
-    >>> V = volume.LinComb([(0.5, volume.Isotropic()), (0.5, volume.Rayleigh())])
-
-    >>> from rt1_model import surface
-    >>> V = surface.LinComb([(0.5, surface.Isotropic()),
-                             (0.5, surface.HenyeyGreenstein(t="t", ncoefs=10))])
-
-    You can also use expressions for the weights!
-
-    >>> from rt1_model import surface
-    >>> V = surface.LinComb([("x", surface.Isotropic()),
-                             ("1 - x", surface.HenyeyGreenstein(t="t", ncoefs=10))])
-
-
-    """
-
     def __init__(self, choices=None, **kwargs):
+        """
+        Class to generate linear-combinations of scattering distribution functions.
+
+        For details please look at the documentation
+        (http://rt1.readthedocs.io/en/latest/model_specification.html#linear-combination-of-scattering-distributions)
+
+        Parameters
+        ----------
+        choices : [ (float, ScatterObject) , (float, ScatterObject) ,  ...]
+            A list that contains the the individual scattering functions
+            and the associated weighting-factors for the linear-combination.
+
+            The weights can be either numerical values or strings
+            (which will be parsed as sympy expressions)
+
+        Examples
+        --------
+        Defining linear-combinations of volume- or surface scattering distributions
+        works completely similar:
+
+        >>> from rt1_model import volume
+        >>> V = volume.LinComb([(0.5, volume.Isotropic()), (0.5, volume.Rayleigh())])
+
+        >>> from rt1_model import surface
+        >>> V = surface.LinComb([(0.5, surface.Isotropic()),
+                                 (0.5, surface.HenyeyGreenstein(t="t", ncoefs=10))])
+
+        You can also use expressions for the weights!
+
+        >>> from rt1_model import surface
+        >>> V = surface.LinComb([("x", surface.Isotropic()),
+                                 ("1 - x", surface.HenyeyGreenstein(t="t", ncoefs=10))])
+
+        """
         self._weights, self._objs = [], []
         for w, o in choices:
             # cast weights passed as strings to sympy symbols

@@ -17,131 +17,20 @@ import sympy as sp
 from scipy.special import expi, expn
 from scipy.sparse import vstack, block_diag, csr_matrix
 
-from . import _log
+from . import _log, get_lambda_backend
+from .helpers import _lambdify, _parse_sympy_param
 
 try:
-    # if symengine is available, use it to perform series-expansions
-    from symengine import expand, Lambdify
+    from .plot import Analyze, Analyze3D
 
-    _init_lambda_backend = "symengine"
+    _register_plotfuncs = True
+except Exception:
+    _log.debug("Unable to register plot-functions", exc_info=True)
+    _register_plotfuncs = False
 
-except ImportError:
-    from sympy import expand
-
-    _init_lambda_backend = "sympy"
-
-
-def set_lambda_backend(lambda_backend):
-    """
-    Set the backend that will be used to evaluate symbolic expressions.
-
-    Parameters
-    ----------
-    lambda_backend : str (default = 'symengine' if possible, else 'sympy')
-        The backend that will be used to evaluate and compile functions for
-        numerical evaluation of symbolic expressions.
-
-        Possible values are:
-            - 'sympy' : sympy.lambdify is used to compile functions with numpy and scipy
-            - 'symengine' : symengine.LambdifyCSE is used to compile functions.
-              This results in considerable speedup for more complex model calculations!
-
-    """
-    global _init_lambda_backend
-    assert lambda_backend in [
-        "sympy",
-        "symengine",
-    ], f"Lambda backend {lambda_backend} is not defined!"
-    _init_lambda_backend = lambda_backend
-
-    _log.debug("Backend set to {lambda_backend}")
-
-
-_local_variable_symbols = dict(N=sp.Symbol("N"))
-
-
-def _parse_sympy_param(val):
-    # convenience function to set parameters as sympy.Symbols if a string
-    # was used as value
-    if isinstance(val, str):
-        return sp.parse_expr(val, local_dict=_local_variable_symbols)
-    else:
-        return val
-
-
-def _lambdify(variables, functions):
-    """
-    Lambdify a list of functions with the selected lambda_backend.
-
-    Parameters
-    ----------
-    variables : list
-        A list of strings or sympy.Symbols defining the function variables.
-    functions : list
-        A list of sympy expressions or strings that can be parsed as expressions.
-    """
-    # lambdify provided functions with sympy or symengine and unify call signature
-
-    var = []
-    for v in np.atleast_1d(variables):
-        if isinstance(v, str):
-            var.append(sp.Symbol(v))
-        else:
-            var.append(v)
-
-    funcs = []
-    for f in np.atleast_1d(functions):
-        if isinstance(f, str):
-            funcs.append(sp.parse_expr(f, local_dict=_local_variable_symbols))
-        else:
-            funcs.append(f)
-
-    # make sure that we don't add additional axes to the returned dataset
-    # if a single function is evaluated
-    if len(funcs) == 1 and not isinstance(functions, list):
-        funcs = funcs[0]
-
-    # use symengine's Lambdify if symengine has been used within
-    # the fn-coefficient generation
-    if _init_lambda_backend == "symengine":
-        # using symengines own "common subexpression elimination"
-        # routine to perform lambdification
-
-        # llvm backend is used to allow pickling of the functions
-        # see https://github.com/symengine/symengine.py/issues/294
-        seng_lambda_func = Lambdify(
-            var,
-            funcs,
-            order="F",
-            cse=True,
-            backend="llvm",
-        )
-
-        var_names = list(map(str, variables))
-
-        def lambda_func(*args, **kwargs):
-            # allow similar call signature as sympy functions
-            # (e.g. both args and kwargs)
-            return seng_lambda_func(
-                *np.broadcast_arrays(
-                    *args, *(kwargs[key] for key in var_names[len(args) :])
-                )
-            )
-
-    elif _init_lambda_backend == "sympy":
-        # using sympy's lambdify without "common subexpression
-        # elimination" to perform lambdification
-
-        lambda_func = sp.lambdify(
-            var,
-            funcs,
-            modules=["numpy", "sympy"],
-            dummify=False,
-        )
-    else:
-        raise TypeError(f"lambda_backend {_init_lambda_backend} is not available")
-
-    return lambda_func
+if get_lambda_backend() == "symengine":
+    # use symengine to perform series-expansions
+    from symengine import expand as seng_expand
 
 
 class RT1(object):
@@ -176,14 +65,6 @@ class RT1(object):
     I0 : array-like (float)
          Incident intensity. (Only relevant if sig0 = False)
          The default is 1.
-
-    Attributes
-    ----------
-    param_dict : dict
-        A dictionary that is used to assign numerical values to the free parameters
-        of the model. (e.g. "tau", "omega", "NormBRDF", "bsf" and all parameters
-        required to fully specify `V` and `SRF`). The default is {"bsf": 0}.
-        Use :py:meth:`update_params` to update the used parameters!
 
     """
 
@@ -242,7 +123,7 @@ class RT1(object):
         self._geometry = "mono"
         self.set_geometry(t_0=np.pi / 4, p_0=0)
 
-        self._register_plotfuncs()
+        # self._register_plotfuncs()
 
     def __getstate__(self):
         # this is required since functions created by
@@ -257,7 +138,7 @@ class RT1(object):
                 _log.warning(f"Setting {Nonekey} to None")
                 self.__dict__[Nonekey] = None
 
-        if _init_lambda_backend == "symengine":
+        if get_lambda_backend() == "symengine":
             _log.warning(
                 "The dump of the _fnevals functions "
                 + "generated by symengine will be platform-dependent!"
@@ -268,40 +149,6 @@ class RT1(object):
             self.__dict__[key] = None
 
         return self.__dict__
-
-    def __setstate__(self, d):
-        self.__dict__.update(d)
-        self._register_plotfuncs()
-
-    def _register_plotfuncs(self):
-        try:
-            from .plot import Analyze, Analyze3D
-
-            @wraps(
-                Analyze.__init__,
-                assigned=("__module__", "__qualname__", "__doc__", "__annotations__"),
-            )
-            def analyze(*args, **kwargs):
-                return Analyze(R=self, **kwargs)
-
-            @wraps(
-                Analyze3D.__init__,
-                assigned=("__module__", "__qualname__", "__doc__", "__annotations__"),
-            )
-            def analyze3d(*args, **kwargs):
-                return Analyze3D(R=self, **kwargs)
-
-            self.analyze = analyze
-            self.analyze3d = analyze3d
-
-        except ImportError as ex:
-            # to provide a useful error message in case matpltolib was not found
-            def _getf(ex):
-                def f(*args, **kwargs):
-                    raise ex
-
-            self.analyze = _getf(ex)
-            self.analyze3d = _getf(ex)
 
     def _clear_cache(self, *keys):
         if keys:
@@ -344,9 +191,33 @@ class RT1(object):
 
         _log.info("\n" + "\n".join(text))
 
+    def _expand(self, *args, **kwargs):
+        backend = get_lambda_backend()
+        if backend == "symengine":
+            return seng_expand(*args, **kwargs)
+        elif backend == "sympy":
+            return sp.expand(*args, **kwargs)
+        else:
+            raise TypeError(f"{backend} is not a valid lambda backend!")
+
+    if _register_plotfuncs:
+
+        @wraps(Analyze.__init__)
+        def analyze(self, **kwargs):
+            return Analyze(R=self, **kwargs)
+
+        @wraps(Analyze3D.__init__)
+        def analyze3d(self, **kwargs):
+            return Analyze3D(R=self, **kwargs)
+
     @property
     def param_dict(self):
-        """Dictionary holding the numerical values assigned to the model parameters."""
+        """
+        A dictionary that is used to assign numerical values to the free parameters
+        of the model. (e.g. "tau", "omega", "NormBRDF", "bsf" and all parameters
+        required to fully specify `V` and `SRF`). The default is {"bsf": 0}.
+        Use :py:meth:`update_params` to update the used parameters!
+        """
         return self._param_dict
 
     @property
@@ -1083,7 +954,7 @@ class RT1(object):
 
         # preparation of the product of p*BRDF for coefficient retrieval
         # this is the eq.23. and would need to be integrated from 0 to 2pi
-        fPoly = expand(2 * sp.pi * volexp * brdfexp)
+        fPoly = self._expand(2 * sp.pi * volexp * brdfexp)
 
         # do integration of eq. 23
         expr = self._integrate_0_2pi_phis(fPoly)
@@ -1094,13 +965,13 @@ class RT1(object):
         replacements = [
             (
                 sp.sin(theta_s) ** i,
-                expand((1.0 - sp.cos(theta_s) ** 2) ** sp.Rational(i, 2)),
+                self._expand((1.0 - sp.cos(theta_s) ** 2) ** sp.Rational(i, 2)),
             )
             for i in range(1, self.SRF.ncoefs + self.V.ncoefs - 1)
             if i % 2 == 0
         ]
 
-        res = expand(expr.xreplace(dict(replacements)))
+        res = self._expand(expr.xreplace(dict(replacements)))
 
         return res
 
@@ -1170,13 +1041,13 @@ class RT1(object):
         replacements1 = replacements1 + [
             (
                 sp.sin(phi_s) ** i,
-                expand((1.0 - sp.cos(phi_s) ** 2) ** sp.Rational(i, 2)),
+                self._expand((1.0 - sp.cos(phi_s) ** 2) ** sp.Rational(i, 2)),
             )
             for i in range(2, self.SRF.ncoefs + self.V.ncoefs + 1)
             if i % 2 == 0
         ]
 
-        res = expand(expr.xreplace(dict(replacements1)))
+        res = self._expand(expr.xreplace(dict(replacements1)))
 
         # replacements need to be done simultaneously, otherwise all
         # remaining sin(phi_s)**even will be replaced by 0
@@ -1187,7 +1058,7 @@ class RT1(object):
             for i in range(1, self.SRF.ncoefs + self.V.ncoefs + 1)
         ]
 
-        res = expand(res.xreplace(dict(replacements3)))
+        res = self._expand(res.xreplace(dict(replacements3)))
         return res
 
     def _S2_mu(self, mu, tau):
