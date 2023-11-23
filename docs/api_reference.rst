@@ -30,4 +30,5 @@ API Reference
    :template: custom-module-template.rst
 
    set_lambda_backend
+   get_lambda_backend
    set_loglevel
