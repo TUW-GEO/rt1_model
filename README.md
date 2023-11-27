@@ -5,14 +5,12 @@
 
 # RT1 model - A bistatic scattering model for first order scattering of random media.
 
-> **NOTE: This repo is a work in progress and supposed to supersede [rt1](https://github.com/TUW-GEO/rt1) soon!**
+<div align="center"> ❗ **NOTE: This repository is a work in progress and might be subject to breaking changes!** ❗ </div>
+<br/>
 
 The package implements a first order scattering radiative transfer model
 for random volume over ground as documented in *Quast & Wagner (2016)* and
 *Quast, Albergel, Calvet, Wagner (2019)*
-
-
-The documentation of the package is found [here](https://rt1-model.readthedocs.io).
 
 ## Installation
 To install the package with minimal dependencies, use:
@@ -27,6 +25,10 @@ To also install plotting capabilities (e.g. matplotlib) use
 ```
 pip install rt1_model[full]
 ```
+
+## Documentation
+
+The documentation of the package is found [here](https://rt1-model.readthedocs.io).
 
 ## Citation
 If you use this package for research, don't forget to add a citation to your publication!
