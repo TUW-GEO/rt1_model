@@ -423,6 +423,8 @@ class RT1(object):
         set_bistatic : Use bistatic evaluation geometry.
 
         """
+        self._clear_geom_cache()
+
         if t_0 is not None:
             assert "t_0" not in self._fixed_angles, "The angle t_0 is fixed!"
             self._t_0 = np.atleast_1d(t_0)
