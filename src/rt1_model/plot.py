@@ -128,6 +128,7 @@ def polarplot(
 
     if ax is None:
         fig = plt.figure(figsize=(7, 7))
+        fig.canvas.header_visible = False
         ax = fig.add_subplot(111, projection="polar")
     else:
         fig = ax.figure
@@ -369,6 +370,7 @@ def hemreflect(
     else:
         # generation of plot
         fig = plt.figure()
+        fig.canvas.header_visible = False
         axnum = fig.add_subplot(1, 1, 1)
 
         if len(sol.shape) > 1:
@@ -487,6 +489,8 @@ class Analyze:
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-1, :-1])
 
         self.f = plt.figure(figsize=(10, 6))
+        self.f.canvas.header_visible = False
+
         self.ax = self.f.add_subplot(gs[:-1, :-1])
 
         self.ax.set_ylabel(
@@ -723,6 +727,7 @@ class Analyze3D:
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-2, :-1])
 
         self.f = plt.figure(figsize=(9, 8))
+        self.f.canvas.header_visible = False
         self.ax = self.f.add_subplot(gs[:-1, :], projection="3d", computed_zorder=False)
 
         self.ax.set_axis_off()
