@@ -39,13 +39,6 @@ class VolumeScatter(_Scatter):
         self._ncoefs = ncoefs
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
-        assert self.ncoefs is not None, "Number of coefficients must be provided!"
-        assert self.ncoefs > 0, "Number of coeficients must be larger than 0!"
-
-    @property
-    def ncoefs(self):
-        """The number of coefficients used in the legendre expansion."""
-        return self._ncoefs
 
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
