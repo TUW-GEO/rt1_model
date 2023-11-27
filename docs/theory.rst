@@ -34,7 +34,7 @@ The individual variables are hereby defined as follows:
 
 	A relationship between the module-functions and the functions within the subsequent discussion is therefore given by:
 
-	:code:`SRF.brdf(t_0,t_ex,p_0,p_ex)` :math:`\hat{=} ~BRDF(\pi - \theta_0, \phi_0, \theta_{ex},\phi_{ex}) \quad` and :math:`\mbox{}\quad` :code:`V.p(t_0,t_ex,p_0,p_ex)` :math:`\hat{=} ~\hat{p}(\pi - \theta_0, \phi_0, \theta_{ex},\phi_{ex})`
+	:code:`SRF.calc(t_0,t_ex,p_0,p_ex)` :math:`\hat{=} ~BRDF(\pi - \theta_0, \phi_0, \theta_{ex},\phi_{ex}) \quad` and :math:`\mbox{}\quad` :code:`V.calc(t_0,t_ex,p_0,p_ex)` :math:`\hat{=} ~\hat{p}(\pi - \theta_0, \phi_0, \theta_{ex},\phi_{ex})`
 
 
 
@@ -216,7 +216,7 @@ Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solutio
 	   \\ \\
 	   \Rightarrow \quad f_0 = \frac{3 R_0}{16\pi}(3-\mu_0^2) \qquad f_1 = 0 \qquad f_2 = \frac{3 R_0}{16\pi}(3 \mu_0 -1) \qquad f_n = 0 ~ \forall ~n>2
 
-     An IPython-notebook that uses the RT1-module to evaluate the above fn-coefficients can be found `HERE <https://github.com/pygeo/rt1/tree/master/doc/examples/example_fn.ipynb>`_
+     An example on how to use the RT1-module to evaluate the above fn-coefficients can be found in the example notebook: :doc:`examples/example_fn`
 
 
 .. bibliography::
