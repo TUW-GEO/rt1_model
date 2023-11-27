@@ -397,7 +397,7 @@ class RT1(object):
 
     def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None):
         """
-        Set the observation geometry (e.g. incidence-angles and mono/bistatic geometry).
+        Set the used (dynamic) incidence-angles when evaluating the model.
 
         Parameters
         ----------
@@ -416,6 +416,11 @@ class RT1(object):
                Array of exit azimuth-angles in radians.
                Only relevant for bistatic geometry!
                (if geometry is 'mono', phi_ex is automatically set to p_0 + np.pi)
+
+        See Also
+        --------
+        set_monostatic : Use monostatic evaluation geometry.
+        set_bistatic : Use bistatic evaluation geometry.
 
         """
         if t_0 is not None:
