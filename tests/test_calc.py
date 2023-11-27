@@ -4,14 +4,25 @@ import cloudpickle
 from rt1_model import RT1, surface, volume, set_lambda_backend, get_lambda_backend
 
 
+@pytest.mark.xfail(raises=AssertionError)
+def test_init_wrong():
+    V = volume.Rayleigh()
+    S = surface.Isotropic()
+
+    R = RT1(V=V, SRF=S)
+    R.set_monostatic(p_0=0)
+    R.set_geometry(t_0=np.deg2rad(60.0), p_0=29.0)
+
+
 def test_init():
     V = volume.Rayleigh()
     S = surface.Isotropic()
 
     R = RT1(V=V, SRF=S)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0, geometry="mono")
+    R.set_monostatic(p_0=0)
+    R.set_geometry(t_0=np.deg2rad(60.0))
 
-    assert R.geometry == "mono"
+    assert R._monostatic is True
     assert R.t_0 == np.deg2rad(60.0)
     assert R.t_ex == R.t_0
     assert R.p_0 == 0.0
@@ -35,7 +46,8 @@ def test_calc(backend):
 
     # check values for sig0 = False
     R = RT1(V=V, SRF=S, dB=False, sig0=False)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0, geometry="mono")
+    R.set_monostatic()
+    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0)
     R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
 
     Itot, Isurf, Ivol, Iint = R.calc()
@@ -43,7 +55,8 @@ def test_calc(backend):
 
     # check values in dB
     R = RT1(V=V, SRF=S, dB=True)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0, geometry="mono")
+    R.set_monostatic(p_0=0.0)
+    R.set_geometry(t_0=np.deg2rad(60.0))
     R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
 
     Itot, Isurf, Ivol, Iint = R.calc()
@@ -54,7 +67,8 @@ def test_calc(backend):
 
     # check values in dB for sig0 = False
     R = RT1(V=V, SRF=S, dB=True, sig0=False)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0, geometry="mono")
+    R.set_monostatic()
+    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0)
     R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
 
     Itot, Isurf, Ivol, Iint = R.calc()
@@ -66,7 +80,8 @@ def test_calc(backend):
     # test results for tau=0 / omega=0
     V = volume.Rayleigh()
     R = RT1(V=V, SRF=S, dB=False)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0, geometry="mono")
+    R.set_monostatic(p_0=0.0)
+    R.set_geometry(t_0=np.deg2rad(60.0))
     R.update_params(tau=0.0, omega=0.0, NormBRDF=0.3)
 
     Itot, Isurf, Ivol, Iint = R.calc()
@@ -93,8 +108,8 @@ def test_zero_tau(backend):
     R.omega = 0
     R.bsf = 0
     R.NormBRDF = 4
-
-    R.set_geometry(t_0=t_0, p_0=p_0, t_ex=t_ex, p_ex=p_ex, geometry="ffff")
+    R.set_bistatic(p_0=p_0, t_ex=t_ex, p_ex=p_ex)
+    R.set_geometry(t_0=t_0)
 
     Itot, Isurf, Ivol, Iint = R.calc()
     assert np.allclose(Isurf, 2.0 / np.pi, 15)
@@ -109,7 +124,8 @@ def test_pickle(backend):
     V = volume.HGRayleigh(t="t_v", ncoefs=8)
 
     R = RT1(V=V, SRF=SRF)
-    R.set_geometry(t_0=0.1, p_0=0.2, geometry="mono")
+    R.set_monostatic(0.2)
+    R.set_geometry(t_0=0.1)
     R.calc(omega=0.3, tau=0.1, NormBRDF=0.3, t_s=0.3, t_v=0.4)
 
     dump = cloudpickle.dumps(R)
@@ -139,7 +155,8 @@ def test_sympy_symengine_equality(sig0, dB):
     R_sympy.NormBRDF = "x"
     R_sympy.tau = "x"
 
-    R_sympy.set_geometry(t_0=t_0, p_0=0.2, geometry="mono")
+    R_sympy.set_monostatic(p_0=0.2)
+    R_sympy.set_geometry(t_0=t_0)
     R_sympy.omega, R_sympy.NormBRDF, R_sympy.tau = "x", "x", "x"
     sympy_res = R_sympy.calc(x=x)
 
@@ -149,8 +166,9 @@ def test_sympy_symengine_equality(sig0, dB):
 
     R_seng = RT1(V=V, SRF=SRF, sig0=sig0, dB=dB)
     R_seng.omega, R_seng.NormBRDF, R_seng.tau = "x", "x", "x"
+    R_seng.set_monostatic(p_0=0.2)
 
-    R_seng.set_geometry(t_0=t_0, p_0=0.2, geometry="mono")
+    R_seng.set_geometry(t_0=t_0)
     seng_res = R_seng.calc(x=x)
 
     assert np.allclose(sympy_res, seng_res)

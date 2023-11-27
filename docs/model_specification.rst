@@ -17,20 +17,11 @@ If the series-expansions (:eq:`brdf_expansion` and :eq:`p_expansion`) contain a 
 Since usually one is only interested in an evaluation with respect to a specific (a-priori known) geometry of the measurement-setup, the rt1-module incorporates a parameter that allows specifying the
 geometry at which the results are being evaluated. This generally results in a considerable speedup for the fn-coefficient generation.
 
-The measurement-geometry for a given :py:class:`RT1` class instance can be set via :py:meth:`RT1.set_geometry`
 
-The measurement-geometry is defined by the value of the :code:`geometry`-parameter of the :py:class:`RT1`  class object:
+The measurement-geometry for a given :py:class:`RT1` class instance can be set via one of the following options:
 
-.. code::
-
-    R = RT1(...)
-    R.set_geometry(t_0=.., t_ex=.., p_0=.., p_ex=.., geometry = '????')
-
-The :code:`geometry`-parameter must be a **4-character string** that can take one of the following possibilities:
-
-    - :code:`'mono'` for `Monostatic Evaluation`_
-    - any combination of :code:`'f'` and :code:`'v'` for `Bistatic Evaluation`_
-
+- For monostatic measurement geometry, use: :py:meth:`RT1.set_monostatic`
+- For bistatic measurement geometry, use: :py:meth:`RT1.set_bistatic`:
 
 
 To clarify the definitions, the used angles are illustrated in :numref:`evaluation_angles`.
@@ -49,8 +40,8 @@ To clarify the definitions, the used angles are illustrated in :numref:`evaluati
 Monostatic Evaluation
 ''''''''''''''''''''''
 
-Monostatic evaluation refers to measurements where both the
-transmitter and the receiver are at the same location.
+Monostatic evaluation refers to measurements where both the transmitter and the receiver are at the same location.
+To use monostatic geometry, call :py:meth:`RT1.set_monostatic`.
 
 In terms of spherical-coordinate description, this is equal to (see :numref:`evaluation_angles`):
 
@@ -68,13 +59,16 @@ The module is set to be evaluated at monostatic geometry by setting:
 .. code::
 
     R = RT1(...)
-    R.set_geometry(t_0=.., p_0=.., geometry = 'mono')
+    R.set_monostatic(p_0=...)   # use monostatic evaluation geometry with a fixed azimuth angle
 
+    R.set_geometry(t_0=...)     # update the angles used for evaluating the model
+    R.calc(...)                 # calculate the result
 
 
 .. note::
-	- If :code:`geometry` is set to :code:`'mono'`, the values of :code:`t_ex` and :code:`p_ex` have no effect since they are automatically set to :code:`t_ex = t_0` and :code:`p_ex = p_0 + Pi`
-	- For azimuthally symmetric phase-functions [#]_, the value of :code:`p_0` will have no effect on results for monostatic geometries!
+	- For monostatic geometry, the values of :code:`t_ex` and :code:`p_ex` are automatically set to :code:`t_ex = t_0` and :code:`p_ex = p_0 + pi`
+	- For azimuthally symmetric phase-functions [#]_, the value of :code:`p_0` will have no effect on results for monostatic calculations!
+	  In this case, using a fixed value (e.g. ``p_0=0``) will further speed up evaluations!
 
 
 .. [#] This referrs to any phase-function whose generalized scattering angle parameters satisfy :code:`a[1] == a[2]`. The reason for this simplification stems from the fact that the azimuthal dependency of a generalized scattering angle with :code:`a[1] == a[2]` can be expressed in terms of :math:`\cos(\phi_0 - \phi_{ex})^n`. For the monostatic geometry this reduces to :math:`\cos(\pi)^n = 1` independent of the choice of :math:`\phi_0`.
@@ -83,38 +77,24 @@ The module is set to be evaluated at monostatic geometry by setting:
 Bistatic Evaluation
 ''''''''''''''''''''
 
-Any possible bistatic measurement geometry can be chosen by manually selecting the angles that shall be treated symbolically (i.e. variable, ``"v"``),
-and those that are treated as numerical constants (i.e. fixed, ``"f"``).
+Bistatic evaulation refers to measurements where the transmitter and receiver are at different locations.
+To use bistatic geometry, call :py:meth:`RT1.set_bistatic`.
 
-The individual characters of the :code:`geometry`-string hereby represent the properties of the incidence- and exit angles
-(see :numref:`evaluation_angles`) in the following order:
+Since evaluation of the coefficients required to evaluate bistatic interaction contributions can be demanding,
+fixing some of the angles can greatly speed up computation times.
+
+To fix an angle, simply pass the value to :py:meth:`RT1.set_bistatic`.
 
 .. code::
 
-	geometry[0] ...	t_0
-	geometry[1] ... t_ex
-	geometry[2] ... p_0
-	geometry[3] ... p_ex
+    R = RT1()
+    R.set_bistatic(t_0=..., p_0=...)   # use bistatic evaluation geometry with fixed source-location
 
-
-- The character :code:`'f'` indicates a **fixed** angle
-	- The given numerical value of the angle will be used rather than it's symbolic representation to speed up evaluation.
-	- The resulting fn-coefficients are only valid for the chosen specific value of the angle.
-
-- The character :code:`'v'` indicates a **variable** angle
-	- The angle will be treated symbolically when evaluating the fn-coefficients in order to provide an analytic
-	  representation of the interaction-term where the considered angle is treated as a variable.
-	- The resulting fn-coefficients can be used for any value of the angle.
-
-
-As an example, the choice :code:`geometry = 'fvfv'` represents a measurement setup where the surface is illuminated at
-constant (polar- and azimuth) incidence-angles and the location of the receiver is variable both in azimuth- and polar direction.
+    R.set_geometry(t_ex=..., p_ex=...) # update angles used for evaluating the model
+    R.calc(...)                        # calculate the result
 
 .. note::
 	- Whenever a single angle is set *fixed*, the calculated fn-coefficients are only valid for this specific choice!
-	- If the chosen scattering-distributions reqire an approximation with a high degree of Legendre-polynomials, evaluating
-	  the interaction-contribution with :code:`geometry = 'vvvv'` might take considerable time since the resulting fn-coefficients
-	  can become extremely long symbolic expressions.
 
 
 Linear combination of scattering distribution functions

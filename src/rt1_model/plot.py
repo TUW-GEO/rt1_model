@@ -1,6 +1,7 @@
 """Class for quick visualization of results and used phasefunctions."""
 
 from itertools import cycle
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -85,6 +86,15 @@ def polarplot(
         plotted on top of each other.
 
     """
+    if aprox is True:
+        try:
+            V_SRF.ncoefs
+        except Exception:
+            _log.warning(
+                "To print scatter function approximations, ncoefs must be provided!"
+            )
+            aprox = False
+
     assert isinstance(inc, list), (
         "Error: incidence-angles for " + "polarplot must be a list"
     )
@@ -413,7 +423,7 @@ def _check_params(R, param_dict, additional_params=[]):
 class Analyze:
     """A widget to analyze a given (monostatic) RT1 model specification."""
 
-    def __init__(self, R, param_dict=None, range_parameter=None):
+    def __init__(self, R, range_parameter=None, **parameters):
         """
         A widget to analyze a given (monostatic) RT1 model specification.
 
@@ -421,22 +431,18 @@ class Analyze:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        param_dict : dict
-            A dictionary containing the value-range for all dynamic parameters of the model.
+        \*\*parameters : tuples of (min, max, [start], [name])
 
-            The dict must have the following form:
+            Value-range (and start-value) for all parameters that are be analyzed.
 
-            >>> {"parameter_name": [min, max, (start),
-            >>> ...
-            >>> }
+            >>> parameter_name = (min, max, [start], [name])
 
             - `min`, `max` : The min-max values of the parameter-range
             - `start` : The start-value to use (optional, if ommitted, center is used)
+            - `name` : The name to use (optional, if ommitted, variable name is used)
 
             For example:
-
-            >>> {"omega": [0, .5, .2, "Omega"],
-            >>>  "tau": [0, .25, .1, "Optical Depth"]}
+            >>> tau = (0.1, 0.4, 0.2, "Optical Depth")
 
         range_parameter : str, optional
             If provided, the range of resulting values for the given parameter
@@ -450,25 +456,17 @@ class Analyze:
 
         self.R = R
 
-        if self.R.geometry != "mono":
+        if self.R._monostatic is False:
             _log.warning("The analyze-plot shows results for monostatic geometry!")
 
-        self.R.set_geometry(
-            t_0=np.deg2rad(self._t0)[np.newaxis], p_0=np.pi, geometry="mono"
-        )
+        self.R.set_monostatic(p_0=0)
+        self.R.set_geometry(t_0=np.deg2rad(self._t0)[np.newaxis])
 
         # number of intermediate parameter values to calculate (for range-indication)
         self._n_mima_samples = 20
 
-        if param_dict is None:
-            param_dict = dict()
-
-        # param_dict.setdefault("omega", (0, 0.5))
-        # param_dict.setdefault("tau", (0, 0.5))
-        # param_dict.setdefault("NormBRDF", (0, 0.2))
-
-        symbs = _check_params(self.R, param_dict)
-        self.param_dict = {key: val for key, val in param_dict.items() if key in symbs}
+        symbs = _check_params(self.R, parameters)
+        self.param_dict = {key: val for key, val in parameters.items() if key in symbs}
 
         self._lines = None
         self._range_lines = set()
@@ -630,7 +628,7 @@ class Analyze:
 class Analyze3D:
     """A widget to analyze the 3D scattering distribution of a selected RT1 specification."""
 
-    def __init__(self, R, param_dict=None, samples=35, contributions="ts"):
+    def __init__(self, R, samples=35, contributions="ts", **parameters):
         """
         A widget to analyze the 3D scattering distribution of a selected RT1 specification.
 
@@ -640,23 +638,17 @@ class Analyze3D:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        param_dict : dict
-            A dictionary containing the value-range for all dynamic parameters of the model.
+        \*\*parameters : dict
+            Value-range (and start-value) for all parameters that are be analyzed.
 
-            The dict must have the following form:
-
-            >>> {"parameter_name": [min, max, (start), (label),
-            >>> ...
-            >>> }
+            >>> parameter_name = (min, max, [start], [name])
 
             - `min`, `max` : The min-max values of the parameter-range
             - `start` : The start-value to use (optional, if ommitted, center is used)
-            - `label` : Parameter-name (optional, if ommitted, variable name is used)
+            - `name` : The name to use (optional, if ommitted, variable name is used)
 
             For example:
-
-            >>> {"omega": [0, .5, .2, "Omega"],
-            >>>  "tau": [0, .25, .1, "Optical Depth"]}
+            >>> tau = (0.1, 0.4, 0.2, "Optical Depth")
 
         samples : int, optional
             The number of samples to draw. (e.g. higher numbers result in better image
@@ -683,31 +675,35 @@ class Analyze3D:
 
         self._samples = samples
 
-        if R.int_Q is False and "i" in contributions:
-            contributions = contributions.replace("i", "")
-            _log.warning("Interaction term requires int_Q=True!")
-
+        self._contributions = contributions
         self._use_contribs = ["tsvi".index(i) for i in contributions]
 
         self._labels = ["Total", "Surface", "Volume", "Interaction"]
         self._colors = ["C0", "C1", "C2", "C3"]
 
-        if self.R.geometry != "fvfv":
-            _log.warning("The analyze-plot shows results for 'fvfv' geometry!")
+        if self.R._monostatic is True:
+            _log.warning("The analyze-plot shows results for bistatic geometry!")
 
         t_ex = np.deg2rad(np.linspace(0, 89, self._samples))
         p_ex = np.deg2rad(np.linspace(-180, 180, self._samples))
-        self._t_ex, self._p_ex = np.meshgrid(t_ex, p_ex)
+        t_ex, p_ex = np.meshgrid(t_ex, p_ex)
 
-        if param_dict is None:
-            param_dict = dict()
+        self._p_0 = 0
+
+        self.R.set_bistatic(p_0=self._p_0)
+        self.R.set_geometry(
+            # t_0=np.deg2rad(45)[np.newaxis],
+            t_0=np.full_like(t_ex, np.deg2rad(45)),
+            t_ex=t_ex,
+            p_ex=p_ex,
+        )
 
         self._inc_range = (0.1, 89.9)
 
         # only use parameters that are actually assigned
         # (to avoid broadcasting issues with obsolete parameters)
-        symbs = _check_params(self.R, param_dict)
-        self.param_dict = {key: val for key, val in param_dict.items() if key in symbs}
+        symbs = _check_params(self.R, parameters)
+        self.param_dict = {key: val for key, val in parameters.items() if key in symbs}
 
         self._artists = set()
 
@@ -759,25 +755,37 @@ class Analyze3D:
             top=0.98, bottom=0.05, hspace=1, wspace=0.5, left=0.1, right=0.98
         )
 
+    @contextmanager
+    def _cx_set_intq(self):
+        init_int_q = self.R.int_Q
+
+        try:
+            if "i" in self._contributions:
+                self.R.int_Q = True
+            else:
+                self.R.int_Q = False
+            yield
+        finally:
+            self.R.int_Q = init_int_q
+
     def _getvals(self, inc=45):
         self.R.set_geometry(
-            np.full_like(self._t_ex, np.deg2rad(inc)),
-            np.full_like(self._t_ex, 0),
-            self._t_ex,
-            self._p_ex,
-            geometry="fvfv",
+            t_0=np.full_like(self.R.t_ex, np.deg2rad(inc)),
+            t_ex=self.R.t_ex,
+            p_ex=self.R.p_ex,
         )
 
-        res = self.R.calc()
+        with self._cx_set_intq():
+            res = self.R.calc()
 
-        x = res * np.sin(self._t_ex) * np.cos(self._p_ex)
-        y = res * np.sin(self._t_ex) * np.sin(self._p_ex)
-        z = res * np.cos(self._t_ex)
+        x = res * np.sin(self.R.t_ex) * np.cos(self.R.p_ex)
+        y = res * np.sin(self.R.t_ex) * np.sin(self.R.p_ex)
+        z = res * np.cos(self.R.t_ex)
         return x, y, z
 
-    def _getarrow(self, r, t_0, p_0):
-        x = r * np.sin(t_0) * np.cos(p_0)
-        y = r * np.sin(t_0) * np.sin(p_0)
+    def _getarrow(self, r, t_0):
+        x = r * np.sin(t_0) * np.cos(self._p_0)
+        y = r * np.sin(t_0) * np.sin(self._p_0)
         z = r * np.cos(t_0)
         return [x, 0], [y, 0], [z, 0]
 
@@ -840,7 +848,8 @@ class Analyze3D:
         self._artists.add(
             self.ax.plot(
                 *self._getarrow(
-                    np.nanmax(np.abs(z[self._use_contribs])), np.deg2rad(inc), 0
+                    np.nanmax(np.abs(z[self._use_contribs])),
+                    np.deg2rad(inc),
                 ),
                 c="k",
                 ls="--",
@@ -849,7 +858,8 @@ class Analyze3D:
         self._artists.add(
             self.ax.plot(
                 *self._getarrow(
-                    np.nanmax(np.abs(z[self._use_contribs])), np.deg2rad(-inc), 0
+                    np.nanmax(np.abs(z[self._use_contribs])),
+                    np.deg2rad(-inc),
                 ),
                 c="k",
                 ls="-",
