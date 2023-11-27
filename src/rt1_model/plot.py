@@ -85,6 +85,15 @@ def polarplot(
         plotted on top of each other.
 
     """
+    if aprox is True:
+        try:
+            V_SRF.ncoefs
+        except Exception:
+            _log.warning(
+                "To print scatter function approximations, ncoefs must be provided!"
+            )
+            aprox = False
+
     assert isinstance(inc, list), (
         "Error: incidence-angles for " + "polarplot must be a list"
     )

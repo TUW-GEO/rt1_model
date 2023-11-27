@@ -10,6 +10,17 @@ from .helpers import _lambdify, _parse_sympy_param
 class _Scatter:
     """The base object for any Surface and Volume objects."""
 
+    @property
+    def ncoefs(self):
+        """The number of coefficients used in the legendre expansion."""
+        if not hasattr(self, "_ncoefs") or self._ncoefs is None:
+            raise AttributeError(
+                "You must specify the number of approximation coefficients for "
+                f"a {self.__class__.__name__} scattering function "
+                "in order calculate interaction-terms!"
+            )
+        return self._ncoefs
+
     def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
         Generalized scattering angle with respect to the given zenith-angles.
