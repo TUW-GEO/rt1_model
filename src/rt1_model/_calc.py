@@ -324,7 +324,6 @@ class RT1(object):
             theta_ex = theta_0
             phi_ex = phi_0 + pi
 
-
         Parameters
         ----------
         p_0 : int, float, optional
@@ -358,7 +357,6 @@ class RT1(object):
 
         Bistatic geometry means that incidence- and exit angles can be arbitrary.
 
-
         Parameters
         ----------
         t_0, t_ex, p_0, p_ex : int, float, optional
@@ -367,7 +365,6 @@ class RT1(object):
             via :py:meth:`set_geometry`. The default is None.
 
         """
-
         # handle bistatic assignments
         self._monostatic = False
 
