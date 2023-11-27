@@ -118,12 +118,11 @@ class RT1(object):
         self._omega = "omega"
 
         self._param_dict = dict(bsf=0)
+        self._fixed_angles = set()
 
         # set default geometry
         self._geometry = "mono"
-        self.set_geometry(t_0=np.pi / 4, p_0=0)
-
-        # self._register_plotfuncs()
+        self.set_monostatic()
 
     def __getstate__(self):
         # this is required since functions created by
@@ -263,15 +262,12 @@ class RT1(object):
     @property
     def t_0(self):
         """Incident zenith angle."""
-        return self._t_0
-
-    @t_0.setter
-    def t_0(self, t_0):
-        self._clear_geom_cache()
-        # if t_0 is given as scalar input, convert it to 1d numpy array
-        if np.isscalar(t_0):
-            t_0 = np.array([t_0])
-        self._t_0 = t_0
+        try:
+            return self._t_0
+        except AttributeError:
+            raise AttributeError(
+                "Please set the evaluation angle `t_0` with R.set_geometry() first!"
+            )
 
     @property
     @lru_cache()
@@ -281,37 +277,25 @@ class RT1(object):
     @property
     def p_0(self):
         """Incident azimuth angle."""
-        return self._p_0
-
-    @p_0.setter
-    def p_0(self, p_0):
-        self._clear_geom_cache()
-        # if p_o is given as scalar input, convert it to 1d numpy array
-        if np.isscalar(p_0):
-            p_0 = np.array([p_0])
-        self._p_0 = p_0
+        try:
+            return self._p_0
+        except AttributeError:
+            raise AttributeError(
+                "Please set the evaluation angle `p_0` with R.set_geometry() first!"
+            )
 
     @property
     def t_ex(self):
         """Exit zenith angle."""
-        if self.geometry == "mono":
+        if self._monostatic:
             return self.t_0
         else:
-            return self._t_ex
-
-    @t_ex.setter
-    def t_ex(self, t_ex):
-        # if geometry is mono, set t_ex to t_0
-        if self.geometry == "mono":
-            _log.warning('t_ex is always equal to t_0 if geometry is "mono"!')
-            pass
-        else:
-            self._clear_geom_cache()
-
-            # if t_ex is given as scalar input, convert it to 1d numpy array
-            if np.isscalar(t_ex):
-                t_ex = np.array([t_ex])
-            self._t_ex = t_ex
+            try:
+                return self._t_ex
+            except AttributeError:
+                raise AttributeError(
+                    "Please set the evaluation angle `t_ex` with R.set_geometry() first!"
+                )
 
     @property
     @lru_cache()
@@ -321,123 +305,118 @@ class RT1(object):
     @property
     def p_ex(self):
         """Exit azimuth angle."""
-        if self.geometry == "mono":
+        if self._monostatic:
             return self.p_0 + np.pi
         else:
-            return self._p_ex
+            try:
+                return self._p_ex
+            except AttributeError:
+                raise AttributeError(
+                    "Please set the evaluation angle `p_ex` with R.set_geometry() first!"
+                )
 
-    @p_ex.setter
-    def p_ex(self, p_ex):
-        # if geometry is mono, set p_ex to p_0
-        if self.geometry == "mono":
-            _log.warning('p_ex is equal to (p_0 + PI) if geometry is "mono"!')
-            pass
+    def set_monostatic(self, p_0=None):
+        """
+        Set monostatic evaluation geometry.
+
+        theta_ex == theta_0
+        phi_ex == phi_0 + pi
+
+        Parameters
+        ----------
+        p_0 : int, float, optional
+            A fixed value to use for phi_0.
+            If not provided, phi_0 is used as a dynamic variable that can be set via :py:meth:`set_geometry`
+            The default is None.
+
+        """
+        self._monostatic = True
+
+        self._clear_geom_cache()
+        self._fixed_angles.clear()
+        self._fn_ = None
+        self._fnevals_ = None
+
+        if p_0 is not None:
+            assert isinstance(
+                p_0, (int, float, np.number)
+            ), "The p_0 angle must be a number for monostatic geometry!"
+            self._p_0 = np.atleast_1d(p_0)
+            self._fixed_angles.add("p_0")
         else:
-            self._clear_geom_cache()
+            p_0 = sp.Symbol("phi_0")
 
-            # if p_ex is given as scalar input, convert it to 1d numpy array
-            if np.isscalar(p_ex):
-                p_ex = np.array([p_ex])
-            self._p_ex = p_ex
+        theta_0 = sp.Symbol("theta_0")
+        self._geom_ang_symbs = [theta_0, theta_0, p_0, p_0]
 
-    @property
-    def geometry(self):
-        """
-        The geometry for which the model should be evaluated.
+    def set_bistatic(self, t_0=None, t_ex=None, p_0=None, p_ex=None):
+        # handle bistatic assignments
+        self._monostatic = False
 
-        A 4 character string specifying which components of the angles should
-        be fixed or variable. This is done to significantly speed up the
-        evaluation-process of the fn-coefficient generation.
+        self._clear_geom_cache()
+        self._fixed_angles.clear()
+        self._fn_ = None
+        self._fnevals_ = None
 
-        The 4 characters represent in order the properties of:
-            t_0, t_ex, p_0, p_ex
+        angs = [t_0, t_ex, p_0, p_ex]
+        attrnames = ["t_0", "t_ex", "p_0", "p_ex"]
 
-        - 'f' indicates that the angle is treated 'fixed'
-          (i.e. treated as a numerical constant)
-        - 'v' indicates that the angle is treated 'variable'
-          (i.e. treated as a sympy-variable)
-        - Passing  geometry = 'mono'  indicates a monstatic geometry
-          (i.e.:  t_ex = t_0, p_ex = p_0 + pi)
-          If monostatic geometry is used, the input-values of t_ex and p_ex
-          have no effect on the calculations!
+        symbs = [sp.Symbol(i) for i in ("theta_0", "theta_ex", "phi_0", "phi_ex")]
 
-        For detailed information on the specification of the
-        geometry-parameter, please have a look at the "Evaluation Geometries"
-        section of the documentation:
-        (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
+        geom_ang_symbs = []
+        geom = ""
+        for i, (ang, symb, attr) in enumerate(zip(angs, symbs, attrnames)):
+            if ang is None:
+                geom += "v"
+                geom_ang_symbs.append(symb)
+            else:
+                assert isinstance(
+                    ang, (int, float, np.number)
+                ), "The fixed angle must be a number!"
+                geom += "f"
+                geom_ang_symbs.append(ang)
+                setattr(self, f"_{attr}", np.atleast_1d(ang))
+                self._fixed_angles.add(attr)
 
-        """
-        return self._geometry
+        self._geom_ang_symbs = geom_ang_symbs
 
-    @geometry.setter
-    def geometry(self, geometry):
-        assert (
-            isinstance(geometry, str) and len(geometry) == 4
-        ), "ERROR: geometry must be a 4-character string!"
-
-        if geometry != self._geometry:
-            self._fn_ = None
-            self._fnevals_ = None
-            self._clear_geom_cache()
-
-        self._geometry = geometry
-
-    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None, geometry=None):
+    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None):
         """
         Set the observation geometry (e.g. incidence-angles and mono/bistatic geometry).
 
         Parameters
         ----------
         t_0 : array_like(float)
-              Array of incident zenith-angles in radians
+              Array of incident zenith-angles in radians.
 
         p_0 : array_like(float)
-              Array of incident azimuth-angles in radians
+              Array of incident azimuth-angles in radians.
 
         t_ex : array_like(float)
-               Array of exit zenith-angles in radians
+               Array of exit zenith-angles in radians.
+               Only relevant for bistatic geometry!
                (if geometry is 'mono', theta_ex is automatically set to t_0)
 
         p_ex : array_like(float)
-               Array of exit azimuth-angles in radians
+               Array of exit azimuth-angles in radians.
+               Only relevant for bistatic geometry!
                (if geometry is 'mono', phi_ex is automatically set to p_0 + np.pi)
 
-        geometry : str (default = 'mono')
-            The geometry for which the model should be evaluated.
-
-            A 4 character string specifying which components of the angles should
-            be fixed or variable. This is done to significantly speed up the
-            evaluation-process of the fn-coefficient generation.
-
-            The 4 characters represent in order the properties of:
-                t_0, t_ex, p_0, p_ex
-
-            - 'f' indicates that the angle is treated 'fixed'
-              (i.e. treated as a numerical constant)
-            - 'v' indicates that the angle is treated 'variable'
-              (i.e. treated as a sympy-variable)
-            - Passing  geometry = 'mono'  indicates a monstatic geometry
-              (i.e.:  t_ex = t_0, p_ex = p_0 + pi)
-              If monostatic geometry is used, the input-values of t_ex and p_ex
-              have no effect on the calculations!
-
-            For detailed information on the specification of the
-            geometry-parameter, please have a look at the "Evaluation Geometries"
-            section of the documentation:
-            (http://rt1.readthedocs.io/en/latest/model_specification.html#evaluation-geometries)
-
         """
-        if geometry is not None:
-            self.geometry = geometry
-
         if t_0 is not None:
-            self.t_0 = t_0
+            assert "t_0" not in self._fixed_angles, "The angle t_0 is fixed!"
+            self._t_0 = np.atleast_1d(t_0)
         if p_0 is not None:
-            self.p_0 = p_0
+            assert "p_0" not in self._fixed_angles, "The angle p_0 is fixed!"
+            self._p_0 = np.atleast_1d(p_0)
         if t_ex is not None:
-            self.t_ex = t_ex
+            assert not self._monostatic, "For monostatic geometry, t_ex = t_0 !"
+            assert "t_ex" not in self._fixed_angles, "The angle t_ex is fixed!"
+            self._t_ex = np.atleast_1d(t_ex)
         if p_ex is not None:
-            self.p_ex = p_ex
+            assert not self._monostatic, "For monostatic geometry, p_ex = p_0 + pi !"
+            assert "t_0" not in self._fixed_angles, "The angle p_ex is fixed!"
+            self._p_ex = np.atleast_1d(p_ex)
 
     def update_params(self, **kwargs):
         """
@@ -914,40 +893,7 @@ class RT1(object):
         theta_s = sp.Symbol("theta_s")
         phi_s = sp.Symbol("phi_s")
 
-        if self.geometry == "mono":
-            # handle monostatic geometry
-            theta_0 = sp.Symbol("theta_0")
-
-            p0 = np.unique(self.p_0)
-            assert len(p0) == 1, (
-                "p_0 must contain only a "
-                + "single unique value for monostatic geometry"
-            )
-
-            angs = [theta_0, theta_0, p0[0], p0[0]]
-        else:
-            # handle all possible bistatic geometry definitions
-            theta_0 = sp.Symbol("theta_0")
-            phi_0 = sp.Symbol("phi_0")
-            theta_ex = sp.Symbol("theta_ex")
-            phi_ex = sp.Symbol("phi_ex")
-
-            angs = []
-            for symb, val, g in zip(
-                (theta_0, theta_ex, phi_0, phi_ex),
-                (self.t_0, self.t_ex, self.p_0, self.p_ex),
-                self.geometry,
-            ):
-                if g == "f":
-                    fixval = np.unique(val)
-                    assert (
-                        len(fixval) == 1
-                    ), "fixed geometries must contain only a single unique value"
-                    angs.append(fixval[0])
-                elif g == "v":
-                    angs.append(symb)
-                else:
-                    raise TypeError(f"{g} is not a valid geometry specifier!")
+        angs = self._geom_ang_symbs
 
         brdfexp = self.SRF.legexpansion(theta_s, angs[1], phi_s, angs[3] + sp.pi).doit()
         volexp = self.V.legexpansion(sp.pi - angs[0], theta_s, angs[2], phi_s).doit()
