@@ -319,15 +319,18 @@ class RT1(object):
         """
         Set monostatic evaluation geometry.
 
-        theta_ex == theta_0
-        phi_ex == phi_0 + pi
+        Monostatic geometry means:
+
+            theta_ex = theta_0
+            phi_ex = phi_0 + pi
+
 
         Parameters
         ----------
         p_0 : int, float, optional
-            A fixed value to use for phi_0.
-            If not provided, phi_0 is used as a dynamic variable that can be set via :py:meth:`set_geometry`
-            The default is None.
+            A fixed value to use for phi_0 to speed up symbolic calculations.
+            If None, phi_0 is evaluated as a dynamic variable that can be set
+            via :py:meth:`set_geometry`. The default is None.
 
         """
         self._monostatic = True
@@ -350,6 +353,21 @@ class RT1(object):
         self._geom_ang_symbs = [theta_0, theta_0, p_0, p_0]
 
     def set_bistatic(self, t_0=None, t_ex=None, p_0=None, p_ex=None):
+        """
+        Set bistatic evaluation geometry.
+
+        Bistatic geometry means that incidence- and exit angles can be arbitrary.
+
+
+        Parameters
+        ----------
+        t_0, t_ex, p_0, p_ex : int, float, optional
+            A fixed value to use for the corresponding angle to speed up symbolic calculations.
+            If None, the angle is evaluated as a dynamic variable that can be set
+            via :py:meth:`set_geometry`. The default is None.
+
+        """
+
         # handle bistatic assignments
         self._monostatic = False
 
