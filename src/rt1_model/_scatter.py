@@ -16,8 +16,9 @@ class _Scatter:
         if not hasattr(self, "_ncoefs") or self._ncoefs is None:
             raise AttributeError(
                 "You must specify the number of approximation coefficients for "
-                f"a {self.__class__.__name__} scattering function "
-                "in order calculate interaction-terms!"
+                f"a {self.__class__.__name__} scattering function to calculate "
+                "first-order corrections! (or use `RT1(..., int_Q=False)` "
+                "to omit calculating the interaction-term."
             )
         return self._ncoefs
 

@@ -1,6 +1,7 @@
 """Class for quick visualization of results and used phasefunctions."""
 
 from itertools import cycle
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -674,10 +675,7 @@ class Analyze3D:
 
         self._samples = samples
 
-        if R.int_Q is False and "i" in contributions:
-            contributions = contributions.replace("i", "")
-            _log.warning("Interaction term requires int_Q=True!")
-
+        self._contributions = contributions
         self._use_contribs = ["tsvi".index(i) for i in contributions]
 
         self._labels = ["Total", "Surface", "Volume", "Interaction"]
@@ -690,7 +688,7 @@ class Analyze3D:
         p_ex = np.deg2rad(np.linspace(-180, 180, self._samples))
         t_ex, p_ex = np.meshgrid(t_ex, p_ex)
 
-        self._p_0 = np.pi / 2
+        self._p_0 = 0
 
         self.R.set_bistatic(p_0=self._p_0)
         self.R.set_geometry(
@@ -757,6 +755,19 @@ class Analyze3D:
             top=0.98, bottom=0.05, hspace=1, wspace=0.5, left=0.1, right=0.98
         )
 
+    @contextmanager
+    def _cx_set_intq(self):
+        init_int_q = self.R.int_Q
+
+        try:
+            if "i" in self._contributions:
+                self.R.int_Q = True
+            else:
+                self.R.int_Q = False
+            yield
+        finally:
+            self.R.int_Q = init_int_q
+
     def _getvals(self, inc=45):
         self.R.set_geometry(
             t_0=np.full_like(self.R.t_ex, np.deg2rad(inc)),
@@ -764,7 +775,8 @@ class Analyze3D:
             p_ex=self.R.p_ex,
         )
 
-        res = self.R.calc()
+        with self._cx_set_intq():
+            res = self.R.calc()
 
         x = res * np.sin(self.R.t_ex) * np.cos(self.R.p_ex)
         y = res * np.sin(self.R.t_ex) * np.sin(self.R.p_ex)
