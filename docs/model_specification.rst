@@ -12,10 +12,11 @@ Evaluation Geometries
 
 .. currentmodule:: rt1_model
 
+In order to calculate first order corrections with respect to the chosen scattering distributions, the so-called fn-coefficients have to be evaluated.
 From the general definition of the fn-coefficients :eq:`fn_coef_definition` it is apparent that they are in principle dependent on :math:`\theta_0,\phi_0,\theta_{ex}` and :math:`\phi_{ex}`.
 If the series-expansions (:eq:`brdf_expansion` and :eq:`p_expansion`) contain a high number of Legendre-polynomials, the resulting fn-coefficients turn out to be rather lengthy and moreover their evaluation might consume a lot of time.
 Since usually one is only interested in an evaluation with respect to a specific (a-priori known) geometry of the measurement-setup, the rt1-module incorporates a parameter that allows specifying the
-geometry at which the results are being evaluated. This generally results in a considerable speedup for the fn-coefficient generation.
+geometry at which the results are being evaluated. This results in a considerable speedup for the fn-coefficient generation.
 
 
 The measurement-geometry for a given :py:class:`RT1` class instance can be set via one of the following options:
