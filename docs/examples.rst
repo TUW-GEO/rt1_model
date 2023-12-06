@@ -3,7 +3,7 @@ Examples
 
 .. note::
 
-    To run the example-notebooks, you also need the additional dependencies [matplotlib](https://matplotlib.org/) and [ipympl](https://matplotlib.org/ipympl/).
+    To run the example-notebooks, you also need the additional dependencies `matplotlib <https://matplotlib.org/>`_ and `ipympl <https://matplotlib.org/ipympl/>`_.
 
 
 Basics
