@@ -1,6 +1,11 @@
 Examples
 --------
 
+... note::
+
+    To run the example-notebooks, you also need the additional dependencies [matplotlib](https://matplotlib.org/) and [ipympl](https://matplotlib.org/ipympl/).
+
+
 Basics
 ......
 
