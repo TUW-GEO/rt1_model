@@ -16,15 +16,19 @@ extensions = [
     "sphinx_rtd_theme",
     "myst_nb",
     "sphinxcontrib.bibtex",
+    "sphinx_design",
 ]
 
 bibtex_bibfiles = ["bibliography.bib"]
 
 myst_update_mathjax = False  # to use single $x^2$ for equations
 myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
+myst_enable_extensions = ["dollarmath", "colon_fence"]
 
-myst_enable_extensions = ["dollarmath"]
+myst_title_to_header = True
+
 nb_execution_mode = "cache"
+nb_execution_timeout = 120
 
 autosummary_generate = ["api_reference.rst"]
 

@@ -22,15 +22,19 @@ dependencies:
   - nbformat
   - cloudpickle
 
-  # ---------- to run jupyter notebooks
-  - jupyterlab
-  - ipympl
-
   # ---------- for building the docs
   - myst-nb
   - docutils
   - sphinx
   - sphinx-copybutton
   - sphinx-autobuild
+  - sphinx-design
   - sphinx_rtd_theme
   - sphinxcontrib-bibtex
+
+  # ---------- to run jupyter notebooks
+  - jupyterlab
+  - ipympl
+  - pip
+  - pip:
+    - jupyterlab_myst # for MySt Markdown parsing in jupyterlab

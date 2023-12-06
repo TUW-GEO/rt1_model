@@ -12,11 +12,10 @@ using the `conda <https://github.com/conda/conda>`_ package-manager.
    conda env create -f < path to rt1_dev.yml >
 
 
-The contents of the ``rt1_dev.yml`` file are given below:
+.. dropdown:: Click to view contents of ``rt1_dev.yml``
 
-
-.. literalinclude:: rt1_dev.yml
-   :language: yaml
+    .. literalinclude:: rt1_dev.yml
+       :language: yaml
 
 
 When the environment is set up, make sure to activate it using

@@ -423,6 +423,8 @@ class RT1(object):
         set_bistatic : Use bistatic evaluation geometry.
 
         """
+        self._clear_geom_cache()
+
         if t_0 is not None:
             assert "t_0" not in self._fixed_angles, "The angle t_0 is fixed!"
             self._t_0 = np.atleast_1d(t_0)
@@ -572,11 +574,17 @@ class RT1(object):
             else:
                 raise ex
 
-    def surface(self):
+    def surface(self, **params):
         """
         Numerical evaluation of the surface-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#surface_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -585,6 +593,7 @@ class RT1(object):
             set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
 
         return self._convert_sig0_db(self._surface())
 
@@ -606,11 +615,17 @@ class RT1(object):
 
         return self.NormBRDF * ((1.0 - self.bsf) * Isurf + self.bsf * I_bs)
 
-    def volume(self):
+    def volume(self, **params):
         """
         Numerical evaluation of the volume-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#volume_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -619,6 +634,8 @@ class RT1(object):
             set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
+
         return self._convert_sig0_db(self._volume())
 
     def _volume(self):
@@ -637,11 +654,17 @@ class RT1(object):
 
         return (1.0 - self.bsf) * vol
 
-    def interaction(self):
+    def interaction(self, **params):
         """
         Numerical evaluation of the interaction-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#interaction_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -650,6 +673,8 @@ class RT1(object):
             currently set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
+
         return self._convert_sig0_db(self._interaction())
 
     def _interaction(self):
