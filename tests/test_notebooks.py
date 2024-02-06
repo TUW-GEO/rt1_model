@@ -19,16 +19,18 @@ class TestExamples:
         with open(notebook, encoding="utf-8") as f:
             nb = nbformat.read(f, as_version=4)
             # parse all code-cells from notebook
-            # - exclude lines that use magic commands (e.g. starting with %)
             code_cells = [i["source"] for i in nb["cells"] if i["cell_type"] == "code"]
             code = ""
 
-            # test both sympy and symengine backend
+            # Ingest the following lines at the top of the code so we can
+            # run the notebook with both sympy and symengine backends.
             code += "from rt1_model import set_lambda_backend\n"
             code += f"set_lambda_backend('{backend}')\n"
 
             for c in code_cells:
                 for l in c.split("\n"):
+                    # exclude lines that use IPython magic commands
+                    # (e.g. starting with %)
                     if not l.startswith("%"):
                         code += f"{l}\n"
 
