@@ -13,7 +13,7 @@ class _Scatter:
     @property
     def ncoefs(self):
         """The number of coefficients used in the legendre expansion."""
-        if not hasattr(self, "_ncoefs") or self._ncoefs is None:
+        if self._ncoefs is None:
             raise AttributeError(
                 "You must specify the number of approximation coefficients for "
                 f"a {self.__class__.__name__} scattering function to calculate "
