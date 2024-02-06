@@ -29,6 +29,9 @@ class TestExamples:
 
             for c in code_cells:
                 for l in c.split("\n"):
+                    # strip off plt.show() to avoid blocking the terminal
+                    l = l.replace("plt.show()", "")
+
                     # exclude lines that use IPython magic commands
                     # (e.g. starting with %)
                     if not l.startswith("%"):
