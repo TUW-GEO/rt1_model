@@ -1099,7 +1099,7 @@ class RT1(object):
             *self.param_dict.values(),
         )
 
-        fn = np.broadcast_arrays(*self._fnevals(*args))
+        fn = np.broadcast_arrays(*(np.atleast_1d(i) for i in self._fnevals(*args)))
 
         multip = self._mu_0_x * self._S2_mu(self._mu_0, self.tau)
         S = np.sum(fn * multip, axis=0)
@@ -1118,7 +1118,6 @@ class RT1(object):
             Numerical value of F_int for the given set of parameters
 
         """
-        mu1, mu2, phi1, phi2 = self._mu_ex, self._mu_0, self.p_ex, self.p_0
         args = np.broadcast_arrays(
             self.t_ex,
             self.p_ex,
@@ -1127,7 +1126,7 @@ class RT1(object):
             *self.param_dict.values(),
         )
 
-        fn = np.broadcast_arrays(*self._fnevals(*args))
+        fn = np.broadcast_arrays(*(np.atleast_1d(i) for i in self._fnevals(*args)))
 
         multip = self._mu_ex_x * self._S2_mu(self._mu_ex, self.tau)
         S = np.sum(fn * multip, axis=0)
