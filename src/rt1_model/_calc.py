@@ -395,7 +395,12 @@ class RT1(object):
 
         self._geom_ang_symbs = geom_ang_symbs
 
-    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None):
+    def _sanitize_geometry_parameter(self, name, value):
+        assert name not in self._fixed_angles, "The angle {name} is fixed!"
+        assert value is not None, "You cannot set a geometry-angle to 'None'!"
+        return np.atleast_1d(value)
+
+    def set_geometry(self, **kwargs):
         """
         Set the used (dynamic) incidence-angles when evaluating the model.
 
@@ -423,22 +428,21 @@ class RT1(object):
         set_bistatic : Use bistatic evaluation geometry.
 
         """
+        angles = {"t_0", "t_ex", "p_0", "p_ex"}
+        if not angles.issuperset(kwargs):
+            x = set(kwargs) - angles
+            raise TypeError(f"{x} is not a valid geometry angle, use one of {angles}")
+
+        if "t_ex" in kwargs or "p_ex" in kwargs:
+            assert not self._monostatic, (
+                "Exit-angles cannot be set for monostatic geometry! They are defined "
+                "by the relations: (t_ex = t_0) and (p_ex = p_0 + pi)!"
+            )
+
         self._clear_geom_cache()
 
-        if t_0 is not None:
-            assert "t_0" not in self._fixed_angles, "The angle t_0 is fixed!"
-            self._t_0 = np.atleast_1d(t_0)
-        if p_0 is not None:
-            assert "p_0" not in self._fixed_angles, "The angle p_0 is fixed!"
-            self._p_0 = np.atleast_1d(p_0)
-        if t_ex is not None:
-            assert not self._monostatic, "For monostatic geometry, t_ex = t_0 !"
-            assert "t_ex" not in self._fixed_angles, "The angle t_ex is fixed!"
-            self._t_ex = np.atleast_1d(t_ex)
-        if p_ex is not None:
-            assert not self._monostatic, "For monostatic geometry, p_ex = p_0 + pi !"
-            assert "t_0" not in self._fixed_angles, "The angle p_ex is fixed!"
-            self._p_ex = np.atleast_1d(p_ex)
+        for key, val in kwargs.items():
+            setattr(self, f"_{key}", self._sanitize_geometry_parameter(key, val))
 
     def update_params(self, **kwargs):
         """
