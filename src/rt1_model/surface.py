@@ -31,7 +31,8 @@ class SurfaceScatter(_Scatter):
         # set scattering angle generalization-matrix to [1,1,1] if it is not
         # explicitly provided by the chosen class.
         # this results in a peak in specular-direction which is suitable
-        # for describing surface BRDF's
+        # for describing surface BRDF's, see:
+        # https://rt1-model.rtfd.io/en/latest/model_specification.html#evaluation-angles
         if a is None:
             a = getattr(self, "a", [1.0, 1.0, 1.0])
 
