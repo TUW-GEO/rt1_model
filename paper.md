@@ -1,5 +1,5 @@
 ---
-title: 'rt1_model: A Python package for single-layer bistatic first-order radiative transfer scattering calculations.'
+title: 'rt1_model: A python package for single-layer bistatic first-order radiative transfer scattering calculations.'
 
 tags:
   - python
@@ -20,14 +20,28 @@ bibliography: paper.bib
 
 # Summary
 
-TODO: A nice summary
+
+The `rt1_model` package implements a generic solution to the
+radiative transfer equation applied to the problem of a rough surface covered by a tenuous
+distribution of particulate media as described in @Quast2016.
+
+It provides a flexible, object-oriented interface to specify the scattering characteristics
+of the ground surface and the covering layer via parametric distribution functions.
+
+
+![Illustration of the scattering contributions considered in the RT1 model (from @QuastEtAl23)](docs/_static/model.png)
+
 
 
 # Statement of need
 
-TODO
+Radiative transfer theory has been used in a variety of contexts to retrieve biophysical
+characteristics from radar signals.
 
-Have a look at the papers: @Quast2016, @Quast2019, @Quast2023
+For example, the RT1 modeling framework was used for soil-moisture retrieval
+from microwave c-band radar data (@Quast2019, @Quast2023) and adapted for rice-crop
+monitoring @Yadav2022 from bistatic scatterometer data.
+
 
 
 # Acknowledgements
