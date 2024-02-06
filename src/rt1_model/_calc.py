@@ -944,8 +944,12 @@ class RT1(object):
 
         angs = self._geom_ang_symbs
 
-        brdfexp = self.SRF.legexpansion(theta_s, angs[1], phi_s, angs[3] + sp.pi).doit()
-        volexp = self.V.legexpansion(sp.pi - angs[0], theta_s, angs[2], phi_s).doit()
+        brdfexp = self.SRF.legendre_expansion(
+            theta_s, angs[1], phi_s, angs[3] + sp.pi
+        ).doit()
+        volexp = self.V.legendre_expansion(
+            sp.pi - angs[0], theta_s, angs[2], phi_s
+        ).doit()
 
         # preparation of the product of p*BRDF for coefficient retrieval
         # this is the eq.23. and would need to be integrated from 0 to 2pi
@@ -1013,7 +1017,7 @@ class RT1(object):
         ----------
         expr : sympy expression
                pre-expanded product of the legendre-expansions of
-               V.legexpansion() and SRF.legexpansion()
+               V.legendre_expansion() and SRF.legendre_expansion()
 
         Returns
         -------

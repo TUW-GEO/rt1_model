@@ -42,7 +42,7 @@ class VolumeScatter(_Scatter, metaclass=ABCMeta):
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
 
     @abstractmethod
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         ...
 
@@ -86,7 +86,7 @@ class Isotropic(VolumeScatter):
         return 1
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
         return (1.0 / (4.0 * sp.pi)) * sp.KroneckerDelta(0, n)
@@ -128,7 +128,7 @@ class Rayleigh(VolumeScatter):
         return 3.0 / (16.0 * sp.pi) * (1.0 + x**2.0)
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         # only 3 coefficients are needed to correctly represent
         # the Rayleigh scattering function
@@ -179,11 +179,11 @@ class HenyeyGreenstein(VolumeScatter):
         return func
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
-        legcoefs = (1.0 / (4.0 * sp.pi)) * (2.0 * n + 1) * self.t**n
-        return legcoefs
+        legendre_coefficients = (1.0 / (4.0 * sp.pi)) * (2.0 * n + 1) * self.t**n
+        return legendre_coefficients
 
 
 @append_numpy_docstring(VolumeScatter)
@@ -230,7 +230,7 @@ class HGRayleigh(VolumeScatter):
         )
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
         return sp.Piecewise(

@@ -90,12 +90,12 @@ class _Scatter:
 
         return pfunc
 
-    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+    def legendre_expansion(self, t_0, t_ex, p_0, p_ex):
         """
         Legendre-expansion of the scattering distribution function.
 
         .. note::
-            The incidence-angle argument of the legexpansion() is different
+            The incidence-angle argument of the legendre_expansion() is different
             to the documentation due to the direct definition of the argument
             as the zenith-angle (t_0) instead of the incidence-angle
             defined in a spherical coordinate system (t_i).
@@ -127,7 +127,7 @@ class _Scatter:
         n = sp.Symbol("n")
 
         return sp.Sum(
-            self.legcoefs
+            self.legendre_coefficients
             * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, self.a)),
             (n, 0, self.ncoefs - 1),
         )
@@ -248,14 +248,14 @@ class _LinComb(_Scatter):
         return max([o.ncoefs for o in self._objs])
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         raise NotImplementedError(
             "Legendre coefficients of linear combinations are not defined. "
-            "Use `.legexpansion(...)` to get the combined Legendre expansion!"
+            "Use `.legendre_expansion(...)` to get the combined Legendre expansion!"
         )
 
-    @wraps(_Scatter.legexpansion)
-    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+    @wraps(_Scatter.legendre_expansion)
+    def legendre_expansion(self, t_0, t_ex, p_0, p_ex):
         # evaluate the combined legendre expansion
         n = sp.Symbol("n")
 
@@ -264,10 +264,13 @@ class _LinComb(_Scatter):
             # get max. ncoefs for each a-parameter group
             ncoefs = max(i[1].ncoefs for i in choices)
             # sum up legendre coefficients
-            legcoefs = sum(frac * func.legcoefs for frac, func in choices)
+            legendre_coefficients = sum(
+                frac * func.legendre_coefficients for frac, func in choices
+            )
 
             exp += sp.Sum(
-                legcoefs * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
+                legendre_coefficients
+                * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
                 (n, 0, ncoefs - 1),
             )
 

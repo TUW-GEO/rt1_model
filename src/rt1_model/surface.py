@@ -43,7 +43,7 @@ class SurfaceScatter(_Scatter, metaclass=ABCMeta):
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
 
     @abstractmethod
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         ...
 
@@ -87,7 +87,7 @@ class Isotropic(SurfaceScatter):
         return 1
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return (1.0 / sp.pi) * sp.KroneckerDelta(0, n)
@@ -119,7 +119,7 @@ class CosineLobe(SurfaceScatter):
         self.i = i
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         # A13   The Rational(is needed as otherwise a Gamma function Pole error is issued)
@@ -191,7 +191,7 @@ class HenyeyGreenstein(SurfaceScatter):
         )
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return 1.0 * (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
@@ -255,7 +255,7 @@ class HG_nadirnorm(SurfaceScatter):
         return func
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         nadir_hemreflect = 4 * (
             (1.0 - self.t**2.0)
@@ -275,8 +275,8 @@ class HG_nadirnorm(SurfaceScatter):
         )
 
         n = sp.Symbol("n")
-        legcoefs = (1.0 / nadir_hemreflect) * (
+        legendre_coefficients = (1.0 / nadir_hemreflect) * (
             (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
         )
 
-        return legcoefs
+        return legendre_coefficients
