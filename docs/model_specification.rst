@@ -127,7 +127,7 @@ More details on how to create linear-combinations with the ``rt1_model`` package
    and different numbers of expansion-coefficients (the :code:`ncoefs`-parameter) :code:`LinCombV()` will automatically combine
    the associated Legendre-expansions based on the choices for :code:`a` and :code:`ncoefs`.
 
-   The attributes :code:`.a`, :code:`.scat_angle` and :code:`.ncoefs` of the resulting surface/volume object are therefore **NOT**
+   The attributes :code:`.a`, :code:`.calc_scattering_angle` and :code:`.ncoefs` of the resulting surface/volume object are therefore **NOT**
    representative for the generated combined phase-function!
 
 
