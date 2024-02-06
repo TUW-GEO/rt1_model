@@ -1,5 +1,6 @@
 """Definition of surface scattering functions (BRDF)."""
 
+from abc import abstractmethod, ABCMeta
 from functools import wraps
 
 import sympy as sp
@@ -8,9 +9,9 @@ from ._scatter import _Scatter, _LinComb, _parse_sympy_param
 from .helpers import append_numpy_docstring
 
 
-class SurfaceScatter(_Scatter):
+class SurfaceScatter(_Scatter, metaclass=ABCMeta):
     """
-    Class for use as surface scattering distribution.
+    Abstract base class for use as surface scattering distribution.
 
     Parameters
     ----------
@@ -41,13 +42,15 @@ class SurfaceScatter(_Scatter):
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
 
+    @abstractmethod
     def legcoefs(self):
         """Legendre coefficients of the BRDF."""
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def _func(self):
         """Phase function as sympy object."""
-        raise NotImplementedError
+        ...
 
 
 class LinComb(_LinComb, SurfaceScatter):
