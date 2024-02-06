@@ -53,7 +53,7 @@ def test_surface_init(backend):
 
         SRF.calc(0.1, 0.2, 0.3, 0.4)
         SRF.legendre_expansion(0.1, 0.2, 0.3, 0.4)
-        SRF._func
+        SRF.phase_function
 
 
 @pytest.mark.parametrize("backend", ["sympy", "symengine"])
@@ -85,7 +85,7 @@ def test_volume_init(backend):
         # evaluate function numerical
         V.calc(0.1, 0.2, 0.3, 0.4)
         V.legendre_expansion(0.1, 0.2, 0.3, 0.4)
-        V._func
+        V.phase_function
 
 
 @pytest.mark.parametrize("backend", ["sympy", "symengine"])
@@ -110,7 +110,7 @@ def test_linear_combinations_SRF(backend):
 
     SRF.calc(0.1, 0.2, 0.3, 0.4)
     SRF.legendre_expansion(0.1, 0.2, 0.3, 0.4)
-    SRF._func
+    SRF.phase_function
 
 
 @pytest.mark.parametrize("backend", ["sympy", "symengine"])
@@ -135,4 +135,4 @@ def test_linear_combinations_V(backend):
 
     V.calc(0.1, 0.2, 0.3, 0.4)
     V.legendre_expansion(0.1, 0.2, 0.3, 0.4)
-    V._func
+    V.phase_function

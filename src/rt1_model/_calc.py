@@ -564,7 +564,11 @@ class RT1(object):
                 {
                     *self._all_param_symbs,
                     *map(
-                        str, [*self.V._func.free_symbols, *self.SRF._func.free_symbols]
+                        str,
+                        [
+                            *self.V.phase_function.free_symbols,
+                            *self.SRF.phase_function.free_symbols,
+                        ],
                     ),
                 }
                 - {"phi_0", "phi_ex", "theta_0", "theta_ex"}
@@ -1415,7 +1419,7 @@ class RT1(object):
 
         return _lambdify(
             args,
-            sp.diff(self.V._func, sp.Symbol(key)),
+            sp.diff(self.V.phase_function, sp.Symbol(key)),
         )
 
     def _d_surface_ddummy(self, key):
@@ -1486,7 +1490,7 @@ class RT1(object):
 
         return _lambdify(
             args,
-            sp.diff(self.SRF._func, sp.Symbol(key)),
+            sp.diff(self.SRF.phase_function, sp.Symbol(key)),
         )
 
     def jacobian(self, param_list=["omega", "tau", "NormBRDF"], format="list"):

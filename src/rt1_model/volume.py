@@ -47,8 +47,8 @@ class VolumeScatter(_Scatter, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         ...
 
 
@@ -92,8 +92,8 @@ class Isotropic(VolumeScatter):
         return (1.0 / (4.0 * sp.pi)) * sp.KroneckerDelta(0, n)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         return 1.0 / (4.0 * sp.pi)
 
 
@@ -118,8 +118,8 @@ class Rayleigh(VolumeScatter):
         return 3
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         return 3.0 / (16.0 * sp.pi) * (1.0 + self.scat_angle_symbolic**2.0)
 
     @property
@@ -160,8 +160,8 @@ class HenyeyGreenstein(VolumeScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         func = (1.0 - self.t**2.0) / (
             (4.0 * sp.pi)
             * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
@@ -201,8 +201,8 @@ class HGRayleigh(VolumeScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         return (
             3.0
             / (8.0 * sp.pi)

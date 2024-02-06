@@ -48,7 +48,7 @@ class SurfaceScatter(_Scatter, metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
         ...
 
@@ -93,7 +93,7 @@ class Isotropic(SurfaceScatter):
         return (1.0 / sp.pi) * sp.KroneckerDelta(0, n)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
         return 1.0 / sp.pi
 
@@ -141,7 +141,7 @@ class CosineLobe(SurfaceScatter):
         )
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
         return (
             1.0
@@ -178,7 +178,7 @@ class HenyeyGreenstein(SurfaceScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
 
         return (
@@ -221,7 +221,7 @@ class HG_nadirnorm(SurfaceScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Define Phase function as sympy object."""
 
         nadir_hemreflect = 4 * (

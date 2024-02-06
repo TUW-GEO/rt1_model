@@ -90,16 +90,16 @@ class _Scatter:
 
         # replace arguments and evaluate expression
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(args)
-        pfunc = _lambdify(args, self._func)
+        pfunc = _lambdify(args, self.phase_function)
 
         # TODO check requirement for this!
-        # if _func is a constant, lambdify will create a function that returns a scalar
+        # if phase_function is a constant, lambdify will create a function that returns a scalar
         # which is not suitable for further processing. in that case, vectorize the
         # obtained function
 
         # TODO maybe find a better check for this
-        # if self._func.is_constant():   # this is too slow!
-        # if len(self._func.free_symbols) == 0:
+        # if self.phase_function.is_constant():   # this is too slow!
+        # if len(self.phase_function.free_symbols) == 0:
         #     pfunc = np.vectorize(pfunc)
 
         return pfunc
@@ -246,13 +246,13 @@ class _LinComb(_Scatter):
         super().__init__(**kwargs)
 
     @property
-    def _func(self):
-        """Phase function as sympy object for later evaluation."""
-        _func = 0
+    def phase_function(self):
+        """Phase function as sympy expression for later evaluation."""
+        func = 0
         for c, o in zip(self._weights, self._objs):
-            _func += c * o._func
+            func += c * o.phase_function
 
-        return _func
+        return func
 
     @property
     def ncoefs(self):
