@@ -52,7 +52,7 @@ def test_surface_init(backend):
             ), f"Parameter {key} incorrecty assigned for surface.{name}!"
 
         SRF.calc(0.1, 0.2, 0.3, 0.4)
-        SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
+        SRF.legendre_expansion(0.1, 0.2, 0.3, 0.4)
         SRF._func
 
 
@@ -84,7 +84,7 @@ def test_volume_init(backend):
 
         # evaluate function numerical
         V.calc(0.1, 0.2, 0.3, 0.4)
-        V.legexpansion(0.1, 0.2, 0.3, 0.4)
+        V.legendre_expansion(0.1, 0.2, 0.3, 0.4)
         V._func
 
 
@@ -109,7 +109,7 @@ def test_linear_combinations_SRF(backend):
     SRF = surface.LinComb(choices)
 
     SRF.calc(0.1, 0.2, 0.3, 0.4)
-    SRF.legexpansion(0.1, 0.2, 0.3, 0.4)
+    SRF.legendre_expansion(0.1, 0.2, 0.3, 0.4)
     SRF._func
 
 
@@ -134,5 +134,5 @@ def test_linear_combinations_V(backend):
     V = volume.LinComb(choices)
 
     V.calc(0.1, 0.2, 0.3, 0.4)
-    V.legexpansion(0.1, 0.2, 0.3, 0.4)
+    V.legendre_expansion(0.1, 0.2, 0.3, 0.4)
     V._func

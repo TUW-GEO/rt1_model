@@ -155,7 +155,7 @@ def polarplot(
             # define a plotfunction of the legendre-approximation of p
             if aprox is True:
                 phasefunktapprox = _lambdify(
-                    [*angs, *params.keys()], [V_SRF.legexpansion(*angs).doit()]
+                    [*angs, *params.keys()], [V_SRF.legendre_expansion(*angs).doit()]
                 )
 
             # set incidence-angles for which p is calculated
