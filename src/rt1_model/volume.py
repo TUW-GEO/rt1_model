@@ -20,7 +20,7 @@ class VolumeScatter(_Scatter, metaclass=ABCMeta):
 
     a : [ float , float , float ] , optional (default = [-1.,1.,1.])
         Generalized scattering angle parameters used for defining the
-        scat_angle() of the distribution function. For more details, see:
+        scattering angle of the distribution function. For more details, see:
         https://rt1-model.rtfd.io/en/latest/theory.html#equation-general_scat_angle
 
     """
@@ -120,7 +120,7 @@ class Rayleigh(VolumeScatter):
     @property
     def phase_function(self):
         """Phase function as sympy expression."""
-        return 3.0 / (16.0 * sp.pi) * (1.0 + self.scat_angle_symbolic**2.0)
+        return 3.0 / (16.0 * sp.pi) * (1.0 + self.scattering_angle_symbolic**2.0)
 
     @property
     def legendre_coefficients(self):
@@ -164,7 +164,8 @@ class HenyeyGreenstein(VolumeScatter):
         """Phase function as sympy expression."""
         func = (1.0 - self.t**2.0) / (
             (4.0 * sp.pi)
-            * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
+            * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+            ** 1.5
         )
 
         return func
@@ -209,10 +210,14 @@ class HGRayleigh(VolumeScatter):
             * (
                 1.0
                 / (2.0 + self.t**2)
-                * (1 + self.scat_angle_symbolic**2)
+                * (1 + self.scattering_angle_symbolic**2)
                 * (1.0 - self.t**2.0)
                 / (
-                    (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic)
+                    (
+                        1.0
+                        + self.t**2.0
+                        - 2.0 * self.t * self.scattering_angle_symbolic
+                    )
                     ** 1.5
                 )
             )

@@ -23,7 +23,7 @@ class _Scatter:
         return self._ncoefs
 
     @property
-    def scat_angle_symbolic(self):
+    def scattering_angle_symbolic(self):
         """
         The generalized scattering angle as a sympy expression.
 
@@ -34,9 +34,9 @@ class _Scatter:
         theta_ex = sp.Symbol("theta_ex")
         phi_0 = sp.Symbol("phi_0")
         phi_ex = sp.Symbol("phi_ex")
-        return self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
+        return self.calc_scattering_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
 
-    def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
+    def calc_scattering_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
         Generalized scattering angle with respect to the given zenith-angles.
 
@@ -142,7 +142,7 @@ class _Scatter:
 
         return sp.Sum(
             self.legendre_coefficients
-            * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, self.a)),
+            * sp.legendre(n, self.calc_scattering_angle(t_0, t_ex, p_0, p_ex, self.a)),
             (n, 0, self.ncoefs - 1),
         )
 
@@ -284,7 +284,7 @@ class _LinComb(_Scatter):
 
             exp += sp.Sum(
                 legendre_coefficients
-                * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
+                * sp.legendre(n, self.calc_scattering_angle(t_0, t_ex, p_0, p_ex, a)),
                 (n, 0, ncoefs - 1),
             )
 

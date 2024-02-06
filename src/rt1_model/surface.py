@@ -20,7 +20,7 @@ class SurfaceScatter(_Scatter, metaclass=ABCMeta):
 
     a : [ float , float , float ] , optional (default = [1.,1.,1.])
         Generalized scattering angle parameters used for defining the
-        scat_angle() of the distribution function. For more details, see:
+        scattering angle of the distribution function. For more details, see:
         https://rt1-model.rtfd.io/en/latest/theory.html#equation-general_scat_angle
 
     """
@@ -147,8 +147,8 @@ class CosineLobe(SurfaceScatter):
             1.0
             / sp.pi
             * (
-                self.scat_angle_symbolic
-                * (1.0 + sp.sign(self.scat_angle_symbolic))
+                self.scattering_angle_symbolic
+                * (1.0 + sp.sign(self.scattering_angle_symbolic))
                 / 2.0
             )
             ** self.i
@@ -186,7 +186,8 @@ class HenyeyGreenstein(SurfaceScatter):
             * (1.0 - self.t**2.0)
             / (
                 (sp.pi)
-                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+                ** 1.5
             )
         )
 
@@ -245,7 +246,8 @@ class HG_nadirnorm(SurfaceScatter):
             (1.0 - self.t**2.0)
             / (
                 (sp.pi)
-                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+                ** 1.5
             )
         )
 
