@@ -120,12 +120,7 @@ class Rayleigh(VolumeScatter):
     @property
     def _func(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
-        return 3.0 / (16.0 * sp.pi) * (1.0 + x**2.0)
+        return 3.0 / (16.0 * sp.pi) * (1.0 + self.scat_angle_symbolic**2.0)
 
     @property
     def legendre_coefficients(self):
@@ -167,13 +162,9 @@ class HenyeyGreenstein(VolumeScatter):
     @property
     def _func(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
         func = (1.0 - self.t**2.0) / (
-            (4.0 * sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5
+            (4.0 * sp.pi)
+            * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
         )
 
         return func
@@ -212,20 +203,18 @@ class HGRayleigh(VolumeScatter):
     @property
     def _func(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
         return (
             3.0
             / (8.0 * sp.pi)
             * (
                 1.0
                 / (2.0 + self.t**2)
-                * (1 + x**2)
+                * (1 + self.scat_angle_symbolic**2)
                 * (1.0 - self.t**2.0)
-                / ((1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+                / (
+                    (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic)
+                    ** 1.5
+                )
             )
         )
 
