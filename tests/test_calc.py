@@ -29,66 +29,96 @@ def test_init():
     assert R.p_ex == np.pi
 
 
+@pytest.mark.parametrize("tau", [0.3, 0])
+@pytest.mark.parametrize("p_0_fixed", [True, False])
+@pytest.mark.parametrize("sig0", [True, False])
+@pytest.mark.parametrize("dB", [True, False])
 @pytest.mark.parametrize("backend", ["sympy", "symengine"])
-def test_calc(backend):
+def test_calc_monostatic(backend, dB, sig0, p_0_fixed, tau):
+    p_0 = 0.3
+    t_0 = 0.2
+
+    set_lambda_backend(backend)
+
+    dynamic_angles = {"t_0": t_0}
+    fixed_angles = {}
+
+    if p_0_fixed is False:
+        dynamic_angles["p_0"] = p_0
+    else:
+        fixed_angles["p_0"] = p_0
+
+    V = volume.Rayleigh()
+    S = surface.Isotropic()
+
+    # just try to get it running simply without further testing
+    R = RT1(V=V, SRF=S, dB=dB, sig0=sig0)
+    R.set_monostatic(**fixed_angles)
+    R.set_geometry(**dynamic_angles)
+    R.update_params(tau=tau, omega=0.3, NormBRDF=0.3)
+
+    Itot, Isurf, Ivol, Iint = R.calc()
+
+    if dB is False:
+        assert np.allclose(Itot, Isurf + Ivol + Iint)
+        if tau == 0:
+            assert Isurf >= 0
+            assert Ivol == 0
+            assert Iint == 0
+    else:
+        assert np.allclose(
+            Itot,
+            10 * np.log10(10 ** (Isurf / 10) + 10 ** (Ivol / 10) + 10 ** (Iint / 10)),
+        )
+        if tau == 0:
+            assert Isurf != 0
+            assert Ivol == -np.inf
+            assert Iint == -np.inf
+
+
+@pytest.mark.parametrize("t_ex_fixed", [True, False])
+@pytest.mark.parametrize("t_0_fixed", [True, False])
+@pytest.mark.parametrize("p_ex_fixed", [True, False])
+@pytest.mark.parametrize("p_0_fixed", [True, False])
+@pytest.mark.parametrize("sig0", [True, False])
+@pytest.mark.parametrize("dB", [True, False])
+@pytest.mark.parametrize("backend", ["sympy", "symengine"])
+def test_calc_bistatic(backend, dB, sig0, p_0_fixed, p_ex_fixed, t_0_fixed, t_ex_fixed):
+    tau = 0.2
+    angles = dict(p_0=0.3, t_0=0.2, p_ex=0.45, t_ex=0.23)
+
+    fixed = dict(p_0=p_0_fixed, t_0=t_0_fixed, p_ex=p_ex_fixed, t_ex=t_ex_fixed)
+    dynamic_angles = {key: val for key, val in angles.items() if not fixed[key]}
+    fixed_angles = {key: val for key, val in angles.items() if fixed[key]}
+
     set_lambda_backend(backend)
 
     V = volume.Rayleigh()
     S = surface.Isotropic()
 
     # just try to get it running simply without further testing
-    R = RT1(V=V, SRF=S, dB=False)
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0)
-    R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
+    R = RT1(V=V, SRF=S, dB=dB, sig0=sig0)
+    R.set_bistatic(**fixed_angles)
+    R.set_geometry(**dynamic_angles)
+    R.update_params(tau=tau, omega=0.3, NormBRDF=0.3)
 
     Itot, Isurf, Ivol, Iint = R.calc()
-    assert np.allclose(Itot, Isurf + Ivol + Iint)
 
-    # check values for sig0 = False
-    R = RT1(V=V, SRF=S, dB=False, sig0=False)
-    R.set_monostatic()
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0)
-    R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
-
-    Itot, Isurf, Ivol, Iint = R.calc()
-    assert np.allclose(Itot, Isurf + Ivol + Iint)
-
-    # check values in dB
-    R = RT1(V=V, SRF=S, dB=True)
-    R.set_monostatic(p_0=0.0)
-    R.set_geometry(t_0=np.deg2rad(60.0))
-    R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
-
-    Itot, Isurf, Ivol, Iint = R.calc()
-    assert np.allclose(
-        Itot,
-        10 * np.log10(10 ** (Isurf / 10) + 10 ** (Ivol / 10) + 10 ** (Iint / 10)),
-    )
-
-    # check values in dB for sig0 = False
-    R = RT1(V=V, SRF=S, dB=True, sig0=False)
-    R.set_monostatic()
-    R.set_geometry(t_0=np.deg2rad(60.0), p_0=0.0)
-    R.update_params(tau=0.7, omega=0.3, NormBRDF=0.3)
-
-    Itot, Isurf, Ivol, Iint = R.calc()
-    assert np.allclose(
-        Itot,
-        10 * np.log10(10 ** (Isurf / 10) + 10 ** (Ivol / 10) + 10 ** (Iint / 10)),
-    )
-
-    # test results for tau=0 / omega=0
-    V = volume.Rayleigh()
-    R = RT1(V=V, SRF=S, dB=False)
-    R.set_monostatic(p_0=0.0)
-    R.set_geometry(t_0=np.deg2rad(60.0))
-    R.update_params(tau=0.0, omega=0.0, NormBRDF=0.3)
-
-    Itot, Isurf, Ivol, Iint = R.calc()
-    assert np.allclose(Ivol, 0.0)
-    assert np.allclose(Iint, 0.0)
-    assert np.allclose(Itot, Isurf)
-    assert Isurf > 0.0
+    if dB is False:
+        assert np.allclose(Itot, Isurf + Ivol + Iint)
+        if tau == 0:
+            assert Isurf >= 0
+            assert Ivol == 0
+            assert Iint == 0
+    else:
+        assert np.allclose(
+            Itot,
+            10 * np.log10(10 ** (Isurf / 10) + 10 ** (Ivol / 10) + 10 ** (Iint / 10)),
+        )
+        if tau == 0:
+            assert Isurf != 0
+            assert Ivol == -np.inf
+            assert Iint == -np.inf
 
 
 @pytest.mark.parametrize("backend", ["sympy", "symengine"])
