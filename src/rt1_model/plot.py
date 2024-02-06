@@ -435,7 +435,7 @@ class Analyze:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        \*\*parameters : tuples of (min, max, [start], [name])
+        parameters : tuples of (min, max, [start], [name])
 
             Value-range (and start-value) for all parameters that are be analyzed.
 
@@ -644,7 +644,7 @@ class Analyze3D:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        \*\*parameters : dict
+        parameters : dict
             Value-range (and start-value) for all parameters that are be analyzed.
 
             >>> parameter_name = (min, max, [start], [name])
