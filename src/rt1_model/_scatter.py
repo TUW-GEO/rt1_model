@@ -22,6 +22,20 @@ class _Scatter:
             )
         return self._ncoefs
 
+    @property
+    def scat_angle_symbolic(self):
+        """
+        The generalized scattering angle as a sympy expression.
+
+        (http://rt1.readthedocs.io/en/latest/theory.html#equation-general_scat_angle)
+
+        """
+        theta_0 = sp.Symbol("theta_0")
+        theta_ex = sp.Symbol("theta_ex")
+        phi_0 = sp.Symbol("phi_0")
+        phi_ex = sp.Symbol("phi_ex")
+        return self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
+
     def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
         Generalized scattering angle with respect to the given zenith-angles.

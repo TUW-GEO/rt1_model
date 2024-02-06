@@ -143,13 +143,16 @@ class CosineLobe(SurfaceScatter):
     @property
     def _func(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
-        return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
+        return (
+            1.0
+            / sp.pi
+            * (
+                self.scat_angle_symbolic
+                * (1.0 + sp.sign(self.scat_angle_symbolic))
+                / 2.0
+            )
+            ** self.i
+        )
 
 
 @append_numpy_docstring(SurfaceScatter)
@@ -177,17 +180,14 @@ class HenyeyGreenstein(SurfaceScatter):
     @property
     def _func(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
 
         return (
             1.0
             * (1.0 - self.t**2.0)
-            / ((sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+            / (
+                (sp.pi)
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
+            )
         )
 
     @property
@@ -223,12 +223,6 @@ class HG_nadirnorm(SurfaceScatter):
     @property
     def _func(self):
         """Define Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
 
         nadir_hemreflect = 4 * (
             (1.0 - self.t**2.0)
@@ -249,7 +243,10 @@ class HG_nadirnorm(SurfaceScatter):
 
         func = (1.0 / nadir_hemreflect) * (
             (1.0 - self.t**2.0)
-            / ((sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+            / (
+                (sp.pi)
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scat_angle_symbolic) ** 1.5
+            )
         )
 
         return func
