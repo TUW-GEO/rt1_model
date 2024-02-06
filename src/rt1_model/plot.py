@@ -113,7 +113,7 @@ def polarplot(
         param_dict = [param_dict]
 
     # Check if all required parameters have been provided in the param_dict
-    required_symbs = set(map(str, V_SRF._func.free_symbols)) - {
+    required_symbs = set(map(str, V_SRF.phase_function.free_symbols)) - {
         "phi_0",
         "phi_ex",
         "theta_0",
@@ -397,7 +397,9 @@ def _check_params(R, param_dict, additional_params=[]):
     # check if all required parameters for the analyzers have been defined
     symbs = {
         *R._all_param_symbs,
-        *map(str, [*R.V._func.free_symbols, *R.SRF._func.free_symbols]),
+        *map(
+            str, [*R.V.phase_function.free_symbols, *R.SRF.phase_function.free_symbols]
+        ),
     } - {"phi_0", "phi_ex", "theta_0", "theta_ex"}
     for p in additional_params:
         symbs.add(p)
