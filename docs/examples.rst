@@ -51,4 +51,3 @@ Notes on first-order corrections
 
    examples/example_fn.ipynb
    examples/number_of_expansion_coefficients.ipynb
-   examples/untitled.md
