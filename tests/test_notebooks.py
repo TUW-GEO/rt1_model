@@ -19,9 +19,15 @@ class TestExamples:
         with open(notebook, encoding="utf-8") as f:
             nb = nbformat.read(f, as_version=4)
             # parse all code-cells from notebook
-            code_cells = [i["source"] for i in nb["cells"] if i["cell_type"] == "code"]
-            code = ""
+            code_cells = []
+            for i in nb["cells"]:
+                if (
+                    i["cell_type"] == "code"
+                    and "remove-input" not in i["metadata"]["tags"]
+                ):
+                    code_cells.append(i["source"])
 
+            code = ""
             # Ingest the following lines at the top of the code so we can
             # run the notebook with both sympy and symengine backends.
             code += "from rt1_model import set_lambda_backend\n"
