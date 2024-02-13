@@ -20,29 +20,17 @@ bibliography: paper.bib
 
 # Summary
 
-
-The `rt1_model` package implements a generic solution to the
-radiative transfer equation applied to the problem of a rough surface covered by a tenuous
-distribution of particulate media as described in @Quast2016.
+The `rt1_model` package implements a generic solution to the radiative transfer equation applied to the problem of a rough surface covered by a tenuous distribution of particulate media as described in @Quast2016.
 
 It provides a flexible, object-oriented interface to specify the scattering characteristics
-of the ground surface and the covering layer via parametric distribution functions.
+of the ground surface and the covering layer via parametric distribution functions and evaluate the resulting backscattering-coefficient ($\sigma_0$) for monostatic or bistatic measurement geometries as illustrated in \ref{fig_model}.
 
-
-![Illustration of the scattering contributions considered in the RT1 model (from @QuastEtAl23)](docs/_static/model.png)
-
-
+![Illustration of the scattering contributions considered in the RT1 model (from @QuastEtAl23) \label{fig_model}](docs/_static/model.png)
 
 # Statement of need
 
 Radiative transfer theory has been used in a variety of contexts to retrieve biophysical
-characteristics from radar signals.
-
-For example, the RT1 modeling framework was used for soil-moisture retrieval
-from microwave c-band radar data (@Quast2019, @Quast2023) and adapted for rice-crop
-monitoring @Yadav2022 from bistatic scatterometer data.
-
-
+characteristics from radar signals. For example, the RT1 modeling framework was used for soil-moisture retrieval from microwave c-band radar data (@Quast2019, @Quast2023) and adapted for rice-crop monitoring @Yadav2022 from bistatic scatterometer data.
 
 # Acknowledgements
 
