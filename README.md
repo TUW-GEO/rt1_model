@@ -5,14 +5,10 @@
 
 # RT1 model - A bistatic scattering model for first order scattering of random media.
 
-
 The package implements a first order scattering radiative transfer model
 for random volume over ground as documented in [Quast & Wagner (2016)](https://doi.org/10.1364/ao.55.005379) and
 [Quast, Albergel, Calvet, Wagner (2019)](https://doi.org/10.3390/rs11030285)
 
-<hr>
-<div align="center"> ❗ <b>NOTE: This repository is a work in progress and might be subject to breaking changes!</b> ❗ </div>
-<hr>
 
 ## Installation
 To install the package with minimal dependencies, use:
