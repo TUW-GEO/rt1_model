@@ -1,5 +1,6 @@
 """Definition of surface scattering functions (BRDF)."""
 
+from abc import abstractmethod, ABCMeta
 from functools import wraps
 
 import sympy as sp
@@ -8,9 +9,9 @@ from ._scatter import _Scatter, _LinComb, _parse_sympy_param
 from .helpers import append_numpy_docstring
 
 
-class SurfaceScatter(_Scatter):
+class SurfaceScatter(_Scatter, metaclass=ABCMeta):
     """
-    Class for use as surface scattering distribution.
+    Abstract base class for use as surface scattering distribution.
 
     Parameters
     ----------
@@ -19,7 +20,7 @@ class SurfaceScatter(_Scatter):
 
     a : [ float , float , float ] , optional (default = [1.,1.,1.])
         Generalized scattering angle parameters used for defining the
-        scat_angle() of the distribution function. For more details, see:
+        scattering angle of the distribution function. For more details, see:
         https://rt1-model.rtfd.io/en/latest/theory.html#equation-general_scat_angle
 
     """
@@ -31,7 +32,8 @@ class SurfaceScatter(_Scatter):
         # set scattering angle generalization-matrix to [1,1,1] if it is not
         # explicitly provided by the chosen class.
         # this results in a peak in specular-direction which is suitable
-        # for describing surface BRDF's
+        # for describing surface BRDF's, see:
+        # https://rt1-model.rtfd.io/en/latest/model_specification.html#evaluation-angles
         if a is None:
             a = getattr(self, "a", [1.0, 1.0, 1.0])
 
@@ -40,13 +42,15 @@ class SurfaceScatter(_Scatter):
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
 
-    def legcoefs(self):
+    @abstractmethod
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
-        raise NotImplementedError
+        ...
 
-    def _func(self):
+    @abstractmethod
+    def phase_function(self):
         """Phase function as sympy object."""
-        raise NotImplementedError
+        ...
 
 
 class LinComb(_LinComb, SurfaceScatter):
@@ -83,13 +87,13 @@ class Isotropic(SurfaceScatter):
         return 1
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return (1.0 / sp.pi) * sp.KroneckerDelta(0, n)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
         return 1.0 / sp.pi
 
@@ -115,7 +119,7 @@ class CosineLobe(SurfaceScatter):
         self.i = i
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         # A13   The Rational(is needed as otherwise a Gamma function Pole error is issued)
@@ -137,15 +141,18 @@ class CosineLobe(SurfaceScatter):
         )
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
-        return 1.0 / sp.pi * (x * (1.0 + sp.sign(x)) / 2.0) ** self.i
+        return (
+            1.0
+            / sp.pi
+            * (
+                self.scattering_angle_symbolic
+                * (1.0 + sp.sign(self.scattering_angle_symbolic))
+                / 2.0
+            )
+            ** self.i
+        )
 
 
 @append_numpy_docstring(SurfaceScatter)
@@ -171,23 +178,21 @@ class HenyeyGreenstein(SurfaceScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
 
         return (
             1.0
             * (1.0 - self.t**2.0)
-            / ((sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+            / (
+                (sp.pi)
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+                ** 1.5
+            )
         )
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         n = sp.Symbol("n")
         return 1.0 * (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
@@ -217,14 +222,8 @@ class HG_nadirnorm(SurfaceScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
+    def phase_function(self):
         """Define Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, a=self.a)
 
         nadir_hemreflect = 4 * (
             (1.0 - self.t**2.0)
@@ -245,13 +244,17 @@ class HG_nadirnorm(SurfaceScatter):
 
         func = (1.0 / nadir_hemreflect) * (
             (1.0 - self.t**2.0)
-            / ((sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+            / (
+                (sp.pi)
+                * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+                ** 1.5
+            )
         )
 
         return func
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
         nadir_hemreflect = 4 * (
             (1.0 - self.t**2.0)
@@ -271,8 +274,8 @@ class HG_nadirnorm(SurfaceScatter):
         )
 
         n = sp.Symbol("n")
-        legcoefs = (1.0 / nadir_hemreflect) * (
+        legendre_coefficients = (1.0 / nadir_hemreflect) * (
             (1.0 / (sp.pi)) * (2.0 * n + 1) * self.t**n
         )
 
-        return legcoefs
+        return legendre_coefficients

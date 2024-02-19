@@ -13,7 +13,7 @@ class _Scatter:
     @property
     def ncoefs(self):
         """The number of coefficients used in the legendre expansion."""
-        if not hasattr(self, "_ncoefs") or self._ncoefs is None:
+        if self._ncoefs is None:
             raise AttributeError(
                 "You must specify the number of approximation coefficients for "
                 f"a {self.__class__.__name__} scattering function to calculate "
@@ -22,7 +22,21 @@ class _Scatter:
             )
         return self._ncoefs
 
-    def scat_angle(self, t_0, t_ex, p_0, p_ex, a):
+    @property
+    def scattering_angle_symbolic(self):
+        """
+        The generalized scattering angle as a sympy expression.
+
+        (http://rt1.readthedocs.io/en/latest/theory.html#equation-general_scat_angle)
+
+        """
+        theta_0 = sp.Symbol("theta_0")
+        theta_ex = sp.Symbol("theta_ex")
+        phi_0 = sp.Symbol("phi_0")
+        phi_ex = sp.Symbol("phi_ex")
+        return self.calc_scattering_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
+
+    def calc_scattering_angle(self, t_0, t_ex, p_0, p_ex, a):
         """
         Generalized scattering angle with respect to the given zenith-angles.
 
@@ -76,26 +90,26 @@ class _Scatter:
 
         # replace arguments and evaluate expression
         args = (theta_0, theta_ex, phi_0, phi_ex) + tuple(args)
-        pfunc = _lambdify(args, self._func)
+        pfunc = _lambdify(args, self.phase_function)
 
         # TODO check requirement for this!
-        # if _func is a constant, lambdify will create a function that returns a scalar
+        # if phase_function is a constant, lambdify will create a function that returns a scalar
         # which is not suitable for further processing. in that case, vectorize the
         # obtained function
 
         # TODO maybe find a better check for this
-        # if self._func.is_constant():   # this is too slow!
-        # if len(self._func.free_symbols) == 0:
+        # if self.phase_function.is_constant():   # this is too slow!
+        # if len(self.phase_function.free_symbols) == 0:
         #     pfunc = np.vectorize(pfunc)
 
         return pfunc
 
-    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+    def legendre_expansion(self, t_0, t_ex, p_0, p_ex):
         """
         Legendre-expansion of the scattering distribution function.
 
         .. note::
-            The incidence-angle argument of the legexpansion() is different
+            The incidence-angle argument of the legendre_expansion() is different
             to the documentation due to the direct definition of the argument
             as the zenith-angle (t_0) instead of the incidence-angle
             defined in a spherical coordinate system (t_i).
@@ -127,8 +141,8 @@ class _Scatter:
         n = sp.Symbol("n")
 
         return sp.Sum(
-            self.legcoefs
-            * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, self.a)),
+            self.legendre_coefficients
+            * sp.legendre(n, self.calc_scattering_angle(t_0, t_ex, p_0, p_ex, self.a)),
             (n, 0, self.ncoefs - 1),
         )
 
@@ -232,13 +246,13 @@ class _LinComb(_Scatter):
         super().__init__(**kwargs)
 
     @property
-    def _func(self):
-        """Phase function as sympy object for later evaluation."""
-        _func = 0
+    def phase_function(self):
+        """Phase function as sympy expression for later evaluation."""
+        func = 0
         for c, o in zip(self._weights, self._objs):
-            _func += c * o._func
+            func += c * o.phase_function
 
-        return _func
+        return func
 
     @property
     def ncoefs(self):
@@ -248,14 +262,14 @@ class _LinComb(_Scatter):
         return max([o.ncoefs for o in self._objs])
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         raise NotImplementedError(
             "Legendre coefficients of linear combinations are not defined. "
-            "Use `.legexpansion(...)` to get the combined Legendre expansion!"
+            "Use `.legendre_expansion(...)` to get the combined Legendre expansion!"
         )
 
-    @wraps(_Scatter.legexpansion)
-    def legexpansion(self, t_0, t_ex, p_0, p_ex):
+    @wraps(_Scatter.legendre_expansion)
+    def legendre_expansion(self, t_0, t_ex, p_0, p_ex):
         # evaluate the combined legendre expansion
         n = sp.Symbol("n")
 
@@ -264,10 +278,13 @@ class _LinComb(_Scatter):
             # get max. ncoefs for each a-parameter group
             ncoefs = max(i[1].ncoefs for i in choices)
             # sum up legendre coefficients
-            legcoefs = sum(frac * func.legcoefs for frac, func in choices)
+            legendre_coefficients = sum(
+                frac * func.legendre_coefficients for frac, func in choices
+            )
 
             exp += sp.Sum(
-                legcoefs * sp.legendre(n, self.scat_angle(t_0, t_ex, p_0, p_ex, a)),
+                legendre_coefficients
+                * sp.legendre(n, self.calc_scattering_angle(t_0, t_ex, p_0, p_ex, a)),
                 (n, 0, ncoefs - 1),
             )
 

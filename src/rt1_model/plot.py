@@ -113,7 +113,7 @@ def polarplot(
         param_dict = [param_dict]
 
     # Check if all required parameters have been provided in the param_dict
-    required_symbs = set(map(str, V_SRF._func.free_symbols)) - {
+    required_symbs = set(map(str, V_SRF.phase_function.free_symbols)) - {
         "phi_0",
         "phi_ex",
         "theta_0",
@@ -128,6 +128,7 @@ def polarplot(
 
     if ax is None:
         fig = plt.figure(figsize=(7, 7))
+        fig.canvas.header_visible = False
         ax = fig.add_subplot(111, projection="polar")
     else:
         fig = ax.figure
@@ -154,7 +155,7 @@ def polarplot(
             # define a plotfunction of the legendre-approximation of p
             if aprox is True:
                 phasefunktapprox = _lambdify(
-                    [*angs, *params.keys()], [V_SRF.legexpansion(*angs).doit()]
+                    [*angs, *params.keys()], [V_SRF.legendre_expansion(*angs).doit()]
                 )
 
             # set incidence-angles for which p is calculated
@@ -369,6 +370,7 @@ def hemreflect(
     else:
         # generation of plot
         fig = plt.figure()
+        fig.canvas.header_visible = False
         axnum = fig.add_subplot(1, 1, 1)
 
         if len(sol.shape) > 1:
@@ -395,7 +397,9 @@ def _check_params(R, param_dict, additional_params=[]):
     # check if all required parameters for the analyzers have been defined
     symbs = {
         *R._all_param_symbs,
-        *map(str, [*R.V._func.free_symbols, *R.SRF._func.free_symbols]),
+        *map(
+            str, [*R.V.phase_function.free_symbols, *R.SRF.phase_function.free_symbols]
+        ),
     } - {"phi_0", "phi_ex", "theta_0", "theta_ex"}
     for p in additional_params:
         symbs.add(p)
@@ -431,7 +435,7 @@ class Analyze:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        \*\*parameters : tuples of (min, max, [start], [name])
+        parameters : tuples of (min, max, [start], [name])
 
             Value-range (and start-value) for all parameters that are be analyzed.
 
@@ -487,6 +491,8 @@ class Analyze:
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-1, :-1])
 
         self.f = plt.figure(figsize=(10, 6))
+        self.f.canvas.header_visible = False
+
         self.ax = self.f.add_subplot(gs[:-1, :-1])
 
         self.ax.set_ylabel(
@@ -638,7 +644,7 @@ class Analyze3D:
         ----------
         R : RT1 object
             The RT1 object to analyze.
-        \*\*parameters : dict
+        parameters : dict
             Value-range (and start-value) for all parameters that are be analyzed.
 
             >>> parameter_name = (min, max, [start], [name])
@@ -723,6 +729,7 @@ class Analyze3D:
         sliderspecs = GridSpecFromSubplotSpec(rows, slider_cols, gs[-2, :-1])
 
         self.f = plt.figure(figsize=(9, 8))
+        self.f.canvas.header_visible = False
         self.ax = self.f.add_subplot(gs[:-1, :], projection="3d", computed_zorder=False)
 
         self.ax.set_axis_off()

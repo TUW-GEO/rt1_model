@@ -186,38 +186,13 @@ First, the so-called fn-coefficients are evaluated which are defined via:
 
 Second, :math:`I_{\textrm{interaction}}` is evaluated using the analytic solution to the remaining :math:`\theta`-integral for a given set of fn-coefficients as presented in :cite:p:`.-Quast2016`.
 
-.. admonition:: Example
+.. button-link:: examples/example_fn.html
+    :color: primary
+    :shadow:
+    :ref-type: doc
+    :align: center
 
-	In the following, a simple example on how to evaluate the fn-coefficients is given.
-	The ground is hereby defined as a Lambertian-surface and the covering layer is assumed to consist of Rayleigh-particles. Thus, we have: (:math:`R_0` hereby denotes the diffuse albedo of the surface)
-
-    .. math::
-       &BRDF(\theta, \phi, \theta_{ex},\phi_{ex}) = \frac{R_0}{\pi}
-       \\&p(\theta, \phi, \theta_{ex},\phi_{ex}) = \frac{3}{16\pi} (1+\cos(\Theta)^2)
-       \\&\textrm{with} \qquad \qquad \cos(\Theta) = \cos(\theta)\cos(\theta_{ex}) + \sin(\theta)\sin(\theta_{ex})\cos(\phi - \phi_{ex})
-
-    Evaluation of the fn coefficients:
-	.. math::
-	   &INT = \int_0^{2\pi} p(\theta_0, \phi_0, \theta,\phi) * BRDF(\pi-\theta, \phi, \theta_{ex},\phi_{ex}) d\phi =
-	   \\&\frac{3 R_0}{16 \pi^2} \int\limits_{0}^{2\pi}  \Big(1+[\cos(\theta_0)\cos(\theta) + \sin(\theta_0)\sin(\theta)\cos(\phi_0 - \phi)]^2\Big) d\phi =
-	   \\&\frac{3 R_0}{16 \pi^2} \int\limits_0^{2\pi} \Big(1+ \mu_0^2 \mu^2 + 2 \mu_0 \mu \sin(\theta_0) \sin(\theta) \cos(\phi_0 - \phi) + (1-\mu_0)^2(1-\mu)^2 \cos(\phi_0 - \phi)^2\Big) d\phi
-
-	where the shorthand-notation :math:`\mu_x = \cos(\theta_x)` has been introduced.
-
-	The above integral can now easily be solved by noticing:
-
-	.. math::
-	   \int\limits_0^{2\pi} \cos(\phi_0 - \phi)^n d\phi = \left\lbrace \begin{matrix} 2 \pi & \textrm{for } n=0 \\ 0 & \textrm{for } n=1 \\ \pi  & \textrm{for } n=2 \end{matrix} \right.
-
-	Using some algebraic manipulations we therefore find:
-
-	.. math::
-	   INT = \frac{3 R_0}{16\pi} \Big[ (3-\mu_0^2) + (3 \mu_0 -1) \mu^2 \Big] = \sum_{n=0}^2 f_n ~ \mu^n
-	   \\ \\
-	   \Rightarrow \quad f_0 = \frac{3 R_0}{16\pi}(3-\mu_0^2) \qquad f_1 = 0 \qquad f_2 = \frac{3 R_0}{16\pi}(3 \mu_0 -1) \qquad f_n = 0 ~ \forall ~n>2
-
-     An example on how to use the RT1-module to evaluate the above fn-coefficients can be found in the example notebook: :doc:`examples/example_fn`
-
+    Click here for an example how to evaluate the fn-coefficients manually and with the RT1 package.
 
 .. bibliography::
    :filter: docname in docnames

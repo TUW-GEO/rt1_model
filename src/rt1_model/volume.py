@@ -1,5 +1,6 @@
 """Definition of volume phase scattering functions."""
 
+from abc import abstractmethod, ABCMeta
 from functools import wraps
 
 import sympy as sp
@@ -8,9 +9,9 @@ from ._scatter import _Scatter, _LinComb, _parse_sympy_param
 from .helpers import append_numpy_docstring
 
 
-class VolumeScatter(_Scatter):
+class VolumeScatter(_Scatter, metaclass=ABCMeta):
     """
-    Class for use as volume scattering distribution.
+    Abstract base class for use as volume scattering distribution.
 
     Parameters
     ----------
@@ -19,7 +20,7 @@ class VolumeScatter(_Scatter):
 
     a : [ float , float , float ] , optional (default = [-1.,1.,1.])
         Generalized scattering angle parameters used for defining the
-        scat_angle() of the distribution function. For more details, see:
+        scattering angle of the distribution function. For more details, see:
         https://rt1-model.rtfd.io/en/latest/theory.html#equation-general_scat_angle
 
     """
@@ -40,13 +41,15 @@ class VolumeScatter(_Scatter):
 
         assert len(self.a) == 3, "Generalization-parameter 'a' must contain 3 values"
 
-    def legcoefs(self):
+    @abstractmethod
+    def legendre_coefficients(self):
         """Legendre coefficients of the BRDF."""
-        raise NotImplementedError
+        ...
 
-    def _func(self):
-        """Phase function as sympy object."""
-        raise NotImplementedError
+    @abstractmethod
+    def phase_function(self):
+        """Phase function as sympy expression."""
+        ...
 
 
 class LinComb(_LinComb, VolumeScatter):
@@ -83,14 +86,14 @@ class Isotropic(VolumeScatter):
         return 1
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
         return (1.0 / (4.0 * sp.pi)) * sp.KroneckerDelta(0, n)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
+    def phase_function(self):
+        """Phase function as sympy expression."""
         return 1.0 / (4.0 * sp.pi)
 
 
@@ -115,17 +118,12 @@ class Rayleigh(VolumeScatter):
         return 3
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
-        return 3.0 / (16.0 * sp.pi) * (1.0 + x**2.0)
+    def phase_function(self):
+        """Phase function as sympy expression."""
+        return 3.0 / (16.0 * sp.pi) * (1.0 + self.scattering_angle_symbolic**2.0)
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         # only 3 coefficients are needed to correctly represent
         # the Rayleigh scattering function
@@ -162,25 +160,22 @@ class HenyeyGreenstein(VolumeScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
+    def phase_function(self):
+        """Phase function as sympy expression."""
         func = (1.0 - self.t**2.0) / (
-            (4.0 * sp.pi) * (1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5
+            (4.0 * sp.pi)
+            * (1.0 + self.t**2.0 - 2.0 * self.t * self.scattering_angle_symbolic)
+            ** 1.5
         )
 
         return func
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
-        legcoefs = (1.0 / (4.0 * sp.pi)) * (2.0 * n + 1) * self.t**n
-        return legcoefs
+        legendre_coefficients = (1.0 / (4.0 * sp.pi)) * (2.0 * n + 1) * self.t**n
+        return legendre_coefficients
 
 
 @append_numpy_docstring(VolumeScatter)
@@ -207,27 +202,29 @@ class HGRayleigh(VolumeScatter):
         self.t = _parse_sympy_param(t)
 
     @property
-    def _func(self):
-        """Phase function as sympy object."""
-        theta_0 = sp.Symbol("theta_0")
-        theta_ex = sp.Symbol("theta_ex")
-        phi_0 = sp.Symbol("phi_0")
-        phi_ex = sp.Symbol("phi_ex")
-        x = self.scat_angle(theta_0, theta_ex, phi_0, phi_ex, self.a)
+    def phase_function(self):
+        """Phase function as sympy expression."""
         return (
             3.0
             / (8.0 * sp.pi)
             * (
                 1.0
                 / (2.0 + self.t**2)
-                * (1 + x**2)
+                * (1 + self.scattering_angle_symbolic**2)
                 * (1.0 - self.t**2.0)
-                / ((1.0 + self.t**2.0 - 2.0 * self.t * x) ** 1.5)
+                / (
+                    (
+                        1.0
+                        + self.t**2.0
+                        - 2.0 * self.t * self.scattering_angle_symbolic
+                    )
+                    ** 1.5
+                )
             )
         )
 
     @property
-    def legcoefs(self):
+    def legendre_coefficients(self):
         """Legendre coefficients of the phase function."""
         n = sp.Symbol("n")
         return sp.Piecewise(

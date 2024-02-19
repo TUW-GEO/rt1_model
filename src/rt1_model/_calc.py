@@ -395,7 +395,12 @@ class RT1(object):
 
         self._geom_ang_symbs = geom_ang_symbs
 
-    def set_geometry(self, t_0=None, p_0=None, t_ex=None, p_ex=None):
+    def _sanitize_geometry_parameter(self, name, value):
+        assert name not in self._fixed_angles, "The angle {name} is fixed!"
+        assert value is not None, "You cannot set a geometry-angle to 'None'!"
+        return np.atleast_1d(value)
+
+    def set_geometry(self, **kwargs):
         """
         Set the used (dynamic) incidence-angles when evaluating the model.
 
@@ -423,20 +428,21 @@ class RT1(object):
         set_bistatic : Use bistatic evaluation geometry.
 
         """
-        if t_0 is not None:
-            assert "t_0" not in self._fixed_angles, "The angle t_0 is fixed!"
-            self._t_0 = np.atleast_1d(t_0)
-        if p_0 is not None:
-            assert "p_0" not in self._fixed_angles, "The angle p_0 is fixed!"
-            self._p_0 = np.atleast_1d(p_0)
-        if t_ex is not None:
-            assert not self._monostatic, "For monostatic geometry, t_ex = t_0 !"
-            assert "t_ex" not in self._fixed_angles, "The angle t_ex is fixed!"
-            self._t_ex = np.atleast_1d(t_ex)
-        if p_ex is not None:
-            assert not self._monostatic, "For monostatic geometry, p_ex = p_0 + pi !"
-            assert "t_0" not in self._fixed_angles, "The angle p_ex is fixed!"
-            self._p_ex = np.atleast_1d(p_ex)
+        angles = {"t_0", "t_ex", "p_0", "p_ex"}
+        if not angles.issuperset(kwargs):
+            x = set(kwargs) - angles
+            raise TypeError(f"{x} is not a valid geometry angle, use one of {angles}")
+
+        if "t_ex" in kwargs or "p_ex" in kwargs:
+            assert not self._monostatic, (
+                "Exit-angles cannot be set for monostatic geometry! They are defined "
+                "by the relations: (t_ex = t_0) and (p_ex = p_0 + pi)!"
+            )
+
+        self._clear_geom_cache()
+
+        for key, val in kwargs.items():
+            setattr(self, f"_{key}", self._sanitize_geometry_parameter(key, val))
 
     def update_params(self, **kwargs):
         """
@@ -558,7 +564,11 @@ class RT1(object):
                 {
                     *self._all_param_symbs,
                     *map(
-                        str, [*self.V._func.free_symbols, *self.SRF._func.free_symbols]
+                        str,
+                        [
+                            *self.V.phase_function.free_symbols,
+                            *self.SRF.phase_function.free_symbols,
+                        ],
                     ),
                 }
                 - {"phi_0", "phi_ex", "theta_0", "theta_ex"}
@@ -572,11 +582,17 @@ class RT1(object):
             else:
                 raise ex
 
-    def surface(self):
+    def surface(self, **params):
         """
         Numerical evaluation of the surface-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#surface_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -585,6 +601,7 @@ class RT1(object):
             set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
 
         return self._convert_sig0_db(self._surface())
 
@@ -606,11 +623,17 @@ class RT1(object):
 
         return self.NormBRDF * ((1.0 - self.bsf) * Isurf + self.bsf * I_bs)
 
-    def volume(self):
+    def volume(self, **params):
         """
         Numerical evaluation of the volume-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#volume_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -619,6 +642,8 @@ class RT1(object):
             set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
+
         return self._convert_sig0_db(self._volume())
 
     def _volume(self):
@@ -637,11 +662,17 @@ class RT1(object):
 
         return (1.0 - self.bsf) * vol
 
-    def interaction(self):
+    def interaction(self, **params):
         """
         Numerical evaluation of the interaction-contribution.
 
         (http://rt1.readthedocs.io/en/latest/theory.html#interaction_contribution)
+
+        Parameters
+        ----------
+        params :
+            Additional parameters required to evaluate the model definition.
+            (see :py:meth:`update_params`)
 
         Returns
         -------
@@ -650,6 +681,8 @@ class RT1(object):
             currently set parameters in :py:attr:`param_dict`.
 
         """
+        self.update_params(**params)
+
         return self._convert_sig0_db(self._interaction())
 
     def _interaction(self):
@@ -915,8 +948,12 @@ class RT1(object):
 
         angs = self._geom_ang_symbs
 
-        brdfexp = self.SRF.legexpansion(theta_s, angs[1], phi_s, angs[3] + sp.pi).doit()
-        volexp = self.V.legexpansion(sp.pi - angs[0], theta_s, angs[2], phi_s).doit()
+        brdfexp = self.SRF.legendre_expansion(
+            theta_s, angs[1], phi_s, angs[3] + sp.pi
+        ).doit()
+        volexp = self.V.legendre_expansion(
+            sp.pi - angs[0], theta_s, angs[2], phi_s
+        ).doit()
 
         # preparation of the product of p*BRDF for coefficient retrieval
         # this is the eq.23. and would need to be integrated from 0 to 2pi
@@ -984,7 +1021,7 @@ class RT1(object):
         ----------
         expr : sympy expression
                pre-expanded product of the legendre-expansions of
-               V.legexpansion() and SRF.legexpansion()
+               V.legendre_expansion() and SRF.legendre_expansion()
 
         Returns
         -------
@@ -1070,7 +1107,7 @@ class RT1(object):
             *self.param_dict.values(),
         )
 
-        fn = np.broadcast_arrays(*self._fnevals(*args))
+        fn = np.broadcast_arrays(*(np.atleast_1d(i) for i in self._fnevals(*args)))
 
         multip = self._mu_0_x * self._S2_mu(self._mu_0, self.tau)
         S = np.sum(fn * multip, axis=0)
@@ -1089,7 +1126,6 @@ class RT1(object):
             Numerical value of F_int for the given set of parameters
 
         """
-        mu1, mu2, phi1, phi2 = self._mu_ex, self._mu_0, self.p_ex, self.p_0
         args = np.broadcast_arrays(
             self.t_ex,
             self.p_ex,
@@ -1098,7 +1134,7 @@ class RT1(object):
             *self.param_dict.values(),
         )
 
-        fn = np.broadcast_arrays(*self._fnevals(*args))
+        fn = np.broadcast_arrays(*(np.atleast_1d(i) for i in self._fnevals(*args)))
 
         multip = self._mu_ex_x * self._S2_mu(self._mu_ex, self.tau)
         S = np.sum(fn * multip, axis=0)
@@ -1383,7 +1419,7 @@ class RT1(object):
 
         return _lambdify(
             args,
-            sp.diff(self.V._func, sp.Symbol(key)),
+            sp.diff(self.V.phase_function, sp.Symbol(key)),
         )
 
     def _d_surface_ddummy(self, key):
@@ -1454,7 +1490,7 @@ class RT1(object):
 
         return _lambdify(
             args,
-            sp.diff(self.SRF._func, sp.Symbol(key)),
+            sp.diff(self.SRF.phase_function, sp.Symbol(key)),
         )
 
     def jacobian(self, param_list=["omega", "tau", "NormBRDF"], format="list"):
