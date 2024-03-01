@@ -21,9 +21,8 @@ class TestExamples:
             # parse all code-cells from notebook
             code_cells = []
             for i in nb["cells"]:
-                if (
-                    i["cell_type"] == "code"
-                    and "remove-input" not in i["metadata"]["tags"]
+                if i["cell_type"] == "code" and "remove-input" not in i["metadata"].get(
+                    "tags", {}
                 ):
                     code_cells.append(i["source"])
 
